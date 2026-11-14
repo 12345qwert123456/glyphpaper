@@ -17,9 +17,16 @@
   var PRESETS = {
     // луг: ветер волнами проходит по траве, летит пыльца
     meadow: {
-      scene: {
-        grass: { n: 50, h: [2, 7], colors: ['#2c7a38', '#3e9a4a', '#5cba5e'] },
-        flowers: { n: 11, h: [4, 10], stem: '#3e9a4a', heads: ['#ee78ad', '#f5c542', '#ece9f4', '#b891f2', '#ff8f6b'] }
+      // луг далеко внизу: трава разных оттенков, цветочные поляны, тропинки
+      ground: {
+        thr: 0.40, depth: 0.95, mk: 0.05,
+        layers: [
+          { upto: 0.40, color: '#24502c', a: 0.11, glyphs: "'\",", gd: 0.28 },
+          { upto: 0.72, color: '#2f6a35', a: 0.13, glyphs: "'v\"", gd: 0.32 },
+          { upto: 1.00, color: '#5a5230', a: 0.08, glyphs: ".,", gd: 0.14 }
+        ],
+        blobs: [{ n: 16, r: [1, 2.6], fill: 0.55, a: 0.42, glyphs: '*@o', colors: ['#ee78ad', '#f5c542', '#ece9f4', '#b891f2', '#ff8f6b'] }],
+        sway: { kind: 'tuft', n: 90, colors: ['#3e9a4a', '#5cba5e', '#2c7a38'], a: [0.2, 0.36] }
       },
       medium: 'air', specks: { d: 0.012, glyphs: "',.\"*v", a: [0.05, 0.13] },
       field: { type: 'bands', thr: 0.80, a: 0.045, k: 0.020 },
@@ -27,9 +34,16 @@
     },
     // камыши над водой: ветер и редкие круги внизу
     reeds: {
-      scene: {
-        grass: { n: 34, h: [2, 6], colors: ['#27705a', '#35907a', '#58b89c'] },
-        reeds: { n: 15, h: [8, 18], colors: ['#3c7a54', '#57986c'], head: '#96633a' }
+      // берег пруда сверху: ил, вода, заросли камыша
+      ground: {
+        thr: 0.42, depth: 0.9, mk: 0.04,
+        layers: [
+          { upto: 0.42, color: '#1e4a52', a: 0.09, glyphs: '~', gd: 0.05 },
+          { upto: 0.72, color: '#3a4a2a', a: 0.10, glyphs: '.,', gd: 0.16 },
+          { upto: 1.00, color: '#2e6040', a: 0.12, glyphs: "|'", gd: 0.3 }
+        ],
+        blobs: [{ n: 14, r: [1.2, 3], fill: 0.5, a: 0.34, glyphs: ':|', colors: ['#3c7a54', '#57986c', '#96633a'] }],
+        sway: { kind: 'tuft', n: 60, colors: ['#3c7a54', '#57986c'], a: [0.2, 0.34] }
       },
       medium: 'air', specks: { d: 0.014, glyphs: "|',.:", a: [0.05, 0.12] },
       field: { type: 'bands', thr: 0.82, a: 0.04, k: 0.018 },
@@ -38,16 +52,33 @@
     },
     // ночное небо: звёзды, облака, длинные струи ветра
     sky: {
-      scene: { ridge: { h: [4, 13], color: '#2b3548', edge: '#5d6b85' } },
+      // земля далеко внизу сквозь облака: лоскуты полей, леса, река
+      ground: {
+        thr: 0.44, depth: 0.9, mk: 0.028, quant: true,
+        layers: [
+          { upto: 0.30, color: '#24442c', a: 0.12, glyphs: '^*', gd: 0.3 },
+          { upto: 0.50, color: '#4a5a30', a: 0.08, glyphs: '.', gd: 0.05 },
+          { upto: 0.70, color: '#5c4c30', a: 0.08, glyphs: ',', gd: 0.06 },
+          { upto: 1.00, color: '#34563a', a: 0.08, glyphs: '.', gd: 0.04 }
+        ],
+        river: { color: '#3c6c8c', w: 1.6 }
+      },
       medium: 'air', specks: { d: 0.006, glyphs: ".+*.'", a: [0.06, 0.2] },
       field: { type: 'clouds', thr: 0.60, a: 0.055, k: 0.0042 },
       wind: { base: 14, gust: 30, streaks: 6, long: true }, motes: { n: 8, glyphs: ".", a: 0.18, fall: 0 }
     },
     // пруд сверху: блики, волны, круги, пузырьки
     pond: {
-      scene: {
-        sand: { rows: 4, color: '#b99c64' }, stones: { n: 8 },
-        weeds: { n: 15, h: [5, 14], colors: ['#1d7a5a', '#2f9c72', '#55c28e'] }
+      // дно пруда: песок, ил, камни, водоросли
+      ground: {
+        thr: 0.44, depth: 0.85, mk: 0.045,
+        layers: [
+          { upto: 0.52, color: '#9c8558', a: 0.09, glyphs: '.,:', gd: 0.2 },
+          { upto: 0.80, color: '#5c5a40', a: 0.09, glyphs: '.', gd: 0.08 },
+          { upto: 1.00, color: '#2a3a30', a: 0.12, glyphs: '', gd: 0 }
+        ],
+        stones: { n: 16 },
+        sway: { kind: 'strand', n: 26, len: [4, 10], colors: ['#1d7a5a', '#2f9c72', '#55c28e'], a: [0.22, 0.38] }
       },
       medium: 'water', specks: { d: 0.010, glyphs: ".,:", a: [0.04, 0.10] },
       field: { type: 'caustic', thr: 0.42, a: 0.06, k: 0.030 },
@@ -56,10 +87,17 @@
     },
     // пруд с листьями кувшинок
     lily: {
-      scene: {
-        reeds: { n: 9, h: [6, 14], colors: ['#3c7a54', '#57986c'], head: '#96633a' },
-        weeds: { n: 8, h: [3, 8], colors: ['#1d7a5a', '#2f9c72', '#55c28e'] }, lotus: '#f08ab8'
+      // дно заросшего пруда: тёмный ил, водоросли гуще
+      ground: {
+        thr: 0.48, depth: 0.75, mk: 0.05,
+        layers: [
+          { upto: 0.45, color: '#7c6c48', a: 0.08, glyphs: '.,', gd: 0.14 },
+          { upto: 1.00, color: '#26382c', a: 0.12, glyphs: '', gd: 0 }
+        ],
+        stones: { n: 8 },
+        sway: { kind: 'strand', n: 32, len: [3, 9], colors: ['#1d7a5a', '#2f9c72', '#55c28e'], a: [0.2, 0.36] }
       },
+      lotus: '#f08ab8',
       medium: 'water', specks: { d: 0.014, glyphs: ".,\"o", a: [0.04, 0.10] }, pads: { n: 11, r: [2, 4.2], a: 0.06 },
       field: { type: 'caustic', thr: 0.46, a: 0.055, k: 0.028 },
       current: 4, arcs: { n: 5, len: [6, 14], speed: [6, 14] },
@@ -67,10 +105,16 @@
     },
     // толща воды сбоку: пузырьки поднимаются, течения, «морской снег»
     deep: {
-      scene: {
-        sand: { rows: 5, color: '#8f8b6c' }, stones: { n: 11 },
-        weeds: { n: 12, h: [9, 24], colors: ['#1f6470', '#2f8d84', '#5abc9e'] },
-        corals: { n: 7, colors: ['#dc647e', '#ea8c4c', '#c86cd2'] }
+      // морское дно далеко внизу: песок, скалы, кораллы, водоросли
+      ground: {
+        thr: 0.52, depth: 0.6, mk: 0.04,
+        layers: [
+          { upto: 0.50, color: '#7a7660', a: 0.09, glyphs: '.:', gd: 0.16 },
+          { upto: 1.00, color: '#3c444e', a: 0.11, glyphs: '#', gd: 0.05 }
+        ],
+        stones: { n: 10 },
+        blobs: [{ n: 12, r: [1, 2.4], fill: 0.6, a: 0.36, glyphs: '#*', colors: ['#dc647e', '#ea8c4c', '#c86cd2'] }],
+        sway: { kind: 'strand', n: 20, len: [5, 13], colors: ['#1f6470', '#2f8d84', '#5abc9e'], a: [0.2, 0.34] }
       },
       medium: 'water', side: true, specks: { d: 0.008, glyphs: ".:'", a: [0.04, 0.10] },
       field: { type: 'bands', thr: 0.84, a: 0.035, k: 0.016, flat: true },
@@ -79,9 +123,17 @@
     },
     // берег: песок, камешки, длинные волны прибоя
     shore: {
-      scene: {
-        stones: { n: 12 }, shells: { n: 12, colors: ['#f0a070', '#f2d6c2', '#e87a8c'] },
-        weeds: { n: 5, h: [2, 5], colors: ['#3d7a58', '#5a9a70'] }
+      // пляж: сухой и мокрый песок, лужи прилива, камни, ракушки
+      ground: {
+        thr: 0.20, depth: 1, mk: 0.04,
+        layers: [
+          { upto: 0.50, color: '#a88a5a', a: 0.10, glyphs: '.,:', gd: 0.24 },
+          { upto: 0.78, color: '#6e6046', a: 0.10, glyphs: '.', gd: 0.1 },
+          { upto: 1.00, color: '#2a5a6a', a: 0.08, glyphs: '~', gd: 0.07 }
+        ],
+        stones: { n: 14 },
+        shells: { n: 18, colors: ['#f0a070', '#f2d6c2', '#e87a8c'] },
+        sway: { kind: 'strand', n: 6, len: [2, 4], colors: ['#3d7a58', '#5a9a70'], a: [0.2, 0.32] }
       },
       medium: 'water', specks: { d: 0.035, glyphs: ".,:;.", a: [0.05, 0.13] }, pads: { n: 14, r: [0.9, 1.8], a: 0.05 },
       field: { type: 'caustic', thr: 0.46, a: 0.055, k: 0.022 },
@@ -153,29 +205,33 @@
     return (sceneCss[hex] = C.css(c));
   }
 
-  /** Растения у нижнего края: трава, цветы, камыши, водоросли. Их число задано на 100 столбцов. */
+  function fbm(x, y, sd) { return 0.65 * U.noise2(x, y, sd) + 0.35 * U.noise2(x * 2.3 + 17, y * 2.3 + 5, sd + 1); }
+
+  /** Насколько в ячейке проглядывает дно (0 — скрыто средой, 1 — видно). */
+  function reveal(i, j) {
+    var g = preset.ground;
+    if (!g) return 0;
+    var r = fbm(i * 0.045, j * 0.045, seed + 700);
+    return U.smooth((r - g.thr) / 0.16 + 0.5);
+  }
+
+  /** Подвижные элементы дна: травинки под ветром, водоросли в течении. */
   function buildPlants() {
     plants.length = 0;
-    var sc = preset.scene;
-    if (!sc || !W) return;
-    var pr = U.rng(seed + 500), cols = Math.ceil(W / cell);
-    function add(kind, def, extra) {
-      var n = Math.round(def.n * cols / 100);
-      for (var i = 0; i < n; i++) {
-        var p = {
-          kind: kind, col: pr() * cols, h: Math.round(pr.range(def.h[0], def.h[1])),
-          css: (def.colors || [def.stem])[(pr() * (def.colors || [0]).length) | 0],
-          ph: pr() * U.TAU, w: pr.range(0.6, 1.3), amp: pr.range(0.5, 1.2), a: pr.range(0.3, 0.5)
-        };
-        if (extra) extra(p, pr);
-        plants.push(p);
-      }
+    var g = preset.ground;
+    if (!g || !g.sway || !W) return;
+    var sw = g.sway, pr = U.rng(seed + 500), cols = Math.ceil(W / cell), rows = Math.ceil(H / cell);
+    var n = Math.round(sw.n * cols * rows / 10000), tries = 0;
+    while (plants.length < n && tries++ < n * 8) {
+      var x = pr() * cols, y = pr() * rows, rv = reveal(Math.floor(x), Math.floor(y));
+      if (rv < 0.35) continue;
+      plants.push({
+        kind: sw.kind, x: x, y: y, rv: rv,
+        len: sw.len ? Math.round(pr.range(sw.len[0], sw.len[1])) : 1,
+        css: sw.colors[(pr() * sw.colors.length) | 0], a: pr.range(sw.a[0], sw.a[1]),
+        ang: pr() * U.TAU, ph: pr() * U.TAU, w: pr.range(0.5, 1.2), amp: pr.range(0.4, 1)
+      });
     }
-    if (sc.grass) add('grass', sc.grass);
-    if (sc.weeds) add('weed', sc.weeds, function (p) { p.amp *= 1.5; p.w *= 0.55; });
-    if (sc.reeds) add('reed', sc.reeds, function (p) { p.head = sc.reeds.head; p.amp *= 0.6; });
-    if (sc.flowers) add('flower', sc.flowers, function (p, r) { p.head = sc.flowers.heads[(r() * sc.flowers.heads.length) | 0]; p.amp *= 0.8; });
-    plants.sort(function (a, b) { return a.h - b.h; });        // высокие рисуются поверх низких
   }
 
   function tile(ctx, grid, i, j, css, alpha, gi) {
@@ -190,121 +246,134 @@
     }
   }
 
-  /** Растения качаются: сами по себе и сильнее — от ветра или течения. */
+  function strokeFor(ang) {
+    var q = Math.round(ang / (Math.PI / 4));
+    return A.strokes[[0, 3, 2, 1][((q % 4) + 4) % 4]];
+  }
+
+  /** Вид сверху: травинки клонятся по ветру, водоросли вытягиваются по течению и колышутся. */
   function drawPlants(ctx, grid, vis) {
-    var bottom = grid.rows - 1, i, j, p;
-    var lean = U.clamp(Am.flow.x / (Am.water ? 9 : 16), -3.2, 3.2);
-    var gUp = A.strokes[2], gR = A.strokes[1], gL = A.strokes[3], gStar = A.index['*'], gAt = A.ramp[A.ramp.length - 1];
-    for (i = 0; i < plants.length; i++) {
-      p = plants[i];
-      var css = sceneColor(p.css), prev = 0, x = 0, y = bottom;
-      for (j = 0; j < p.h; j++) {
-        var f = (j + 1) / p.h, bend = f * f;
-        var sway = (Math.sin(t * p.w + p.ph + j * 0.38) * p.amp + lean) * bend;
-        if (p.kind === 'weed') sway += Math.sin(j * 0.75 + p.ph) * 0.9;     // водоросль волнистая сама по себе
-        x = Math.round(p.col + sway); y = bottom - j;
-        var slope = sway - prev;
-        prev = sway;
-        var a = p.a * (1 - 0.3 * f) * vis;
-        tile(ctx, grid, x, y, css, a, slope > 0.34 ? gR : slope < -0.34 ? gL : gUp);
-        // листья водоросли — через одну ячейку по сторонам
-        if (p.kind === 'weed' && j > 1 && j % 3 === 0) tile(ctx, grid, x + ((j / 3) % 2 ? 1 : -1), y, css, a * 0.6, -1);
+    var fx = Am.flow.x, fy = Am.flow.y, fs = Math.sqrt(fx * fx + fy * fy), fa = Math.atan2(fy, fx);
+    for (var i = 0; i < plants.length; i++) {
+      var p = plants[i], css = sceneColor(p.css), base = p.a * p.rv * vis;
+      if (p.kind === 'tuft') {
+        // в тишине травинка видна сверху точкой, под ветром ложится штрихом
+        var lean = U.clamp(fs / 30, 0, 1);
+        var ang = fa + Math.sin(t * p.w * 2 + p.ph) * 0.5 * p.amp;
+        tile(ctx, grid, Math.floor(p.x), Math.floor(p.y), css, base * (0.7 + 0.5 * lean),
+          lean > 0.3 ? strokeFor(ang) : A.index["'"]);
+        if (lean > 0.55) tile(ctx, grid, Math.floor(p.x + Math.cos(ang)), Math.floor(p.y + Math.sin(ang)), css, base * 0.5 * lean, strokeFor(ang));
+        continue;
       }
-      if (p.kind === 'flower') {
-        var hc = sceneColor(p.head), ha = Math.min(0.8, p.a * 1.5) * vis;
-        tile(ctx, grid, x, y, hc, ha, gAt);
-        if (p.h >= 6) {                                   // у высоких цветов — лепестки
-          tile(ctx, grid, x - 1, y, hc, ha * 0.6, gStar); tile(ctx, grid, x + 1, y, hc, ha * 0.6, gStar);
-          tile(ctx, grid, x, y - 1, hc, ha * 0.6, gStar);
-        }
-      } else if (p.kind === 'reed') {
-        var rc = sceneColor(p.head);                      // бархатный початок камыша
-        for (j = 0; j < 3; j++) tile(ctx, grid, x, y - j, rc, Math.min(0.75, p.a * 1.5) * vis, gAt);
+      // водоросль: цепочка от корня, направление — течение, по длине бежит волна
+      var dir = fs > 1.5 ? p.ang + U.angDiff(p.ang, fa) * Math.min(1, fs / 6) : p.ang;
+      var x = p.x, y = p.y, prev = -1;
+      for (var k = 0; k < p.len; k++) {
+        var a = dir + Math.sin(t * p.w + p.ph - k * 0.7) * 0.55 * p.amp;
+        var ci = Math.floor(x), cj = Math.floor(y), key = cj * 10000 + ci;
+        if (key !== prev) tile(ctx, grid, ci, cj, css, base * (1 - 0.45 * k / p.len), k === 0 ? A.ramp[4] : strokeFor(a));
+        prev = key;
+        x += Math.cos(a); y += Math.sin(a);
       }
     }
   }
 
-  /** Неподвижные декорации запекаются в фон: песок, камни, кораллы, горы, ракушки. */
-  function bakeScene(b, grid) {
-    var sc = preset.scene;
-    if (!sc) return;
+  /** Дно (земля под водой или воздухом) запекается в фон и проглядывает пятнами. */
+  function bakeGround(b, grid) {
+    var g = preset.ground;
+    if (!g) return;
     var cd = grid.cd, cols = grid.cols, rows = grid.rows, pr = U.rng(seed + 900), i, j, k;
+    var rv = new Float32Array(cols * rows);
     function cellAt(ci, cj, css, alpha) {
       if (ci < 0 || cj < 0 || ci >= cols || cj >= rows) return;
       b.fillStyle = css; b.globalAlpha = alpha;
       b.fillRect(ci * cd, cj * cd, cd - grid.gap, cd - grid.gap);
     }
-    b.font = '600 ' + Math.max(5, Math.round(cd * CFG.GLYPH_SCALE)) + 'px ' + CFG.FONT_MONO;
-    b.textAlign = 'center'; b.textBaseline = 'middle';
     function glyphAt(ci, cj, ch, css, alpha) {
+      if (ci < 0 || cj < 0 || ci >= cols || cj >= rows) return;
       b.fillStyle = css; b.globalAlpha = alpha;
       b.fillText(ch, ci * cd + cd / 2, cj * cd + cd / 2 + cd * 0.04);
     }
+    function rvAt(ci, cj) { return ci < 0 || cj < 0 || ci >= cols || cj >= rows ? 0 : rv[cj * cols + ci]; }
+    b.font = '600 ' + Math.max(5, Math.round(cd * CFG.GLYPH_SCALE)) + 'px ' + CFG.FONT_MONO;
+    b.textAlign = 'center'; b.textBaseline = 'middle';
 
-    if (sc.ridge) {
-      // силуэт гор на горизонте
-      var rc = sceneColor(sc.ridge.color), re = sceneColor(sc.ridge.edge);
+    // грунт: несколько материалов, видны только там, где среда расступается
+    var css = g.layers.map(function (L) { return sceneColor(L.color); });
+    for (j = 0; j < rows; j++) {
       for (i = 0; i < cols; i++) {
-        var hh = Math.round(U.lerp(sc.ridge.h[0], sc.ridge.h[1], U.noise1(i * 0.045, seed + 31)) +
-          3 * U.noise1(i * 0.21, seed + 32) - 1.5);
-        for (j = 0; j < hh; j++) {
-          var top = j === hh - 1;
-          cellAt(i, rows - 1 - j, top ? re : rc, top ? 0.42 : 0.5 - 0.22 * (j / hh) + 0.08 * U.hash(i, j, seed));
-        }
-        if (hh > 9 && U.hash(i, 3, seed + 33) < 0.5) glyphAt(i, rows - hh, '^', re, 0.5);     // снежные вершины
+        var v = reveal(i, j);
+        rv[j * cols + i] = v;
+        if (v < 0.03) continue;
+        var m = fbm(i * g.mk, j * g.mk, seed + 710);
+        if (g.quant) m = Math.floor(m * 7) / 7 + 0.07;        // лоскуты полей с чёткими краями
+        for (k = 0; k < g.layers.length - 1 && m > g.layers[k].upto; k++) { /* ищем слой */ }
+        var L = g.layers[k], h = U.hash(i, j, seed + 720);
+        cellAt(i, j, css[k], L.a * v * g.depth * (0.65 + 0.7 * h));
+        if (L.glyphs && U.hash(i, j, seed + 721) < L.gd) glyphAt(i, j, L.glyphs[(h * L.glyphs.length) | 0], css[k], 0.55 * v * g.depth);
       }
     }
-    if (sc.sand) {
-      var sand = sceneColor(sc.sand.color);
+
+    // река, петляющая через весь вид
+    if (g.river) {
+      var rc = sceneColor(g.river.color);
       for (i = 0; i < cols; i++) {
-        var dune = sc.sand.rows + Math.round(2.2 * U.noise1(i * 0.07, seed + 41) - 1);
-        for (j = 0; j < dune; j++) {
-          cellAt(i, rows - 1 - j, sand, (0.2 - 0.14 * (j / dune)) * (0.7 + 0.6 * U.hash(i, j, seed + 42)));
-          if (U.hash(i, j, seed + 43) < 0.3) glyphAt(i, rows - 1 - j, '.:,'[(U.hash(i, j, seed + 44) * 3) | 0], sand, 0.4);
+        var ry = rows * (0.25 + 0.5 * U.noise1(i * 0.012, seed + 730)) + 5 * Math.sin(i * 0.06 + seed % 7);
+        for (j = Math.floor(ry - g.river.w - 1); j <= ry + g.river.w + 1; j++) {
+          var dd = Math.abs(j + 0.5 - ry) / g.river.w;
+          if (dd < 1) cellAt(i, j, rc, 0.16 * (1 - 0.4 * dd) * rvAt(i, j) * g.depth);
         }
       }
     }
-    if (sc.stones) {
-      var n = Math.round(sc.stones.n * cols / 100);
-      for (k = 0; k < n; k++) {
-        var sx = pr() * cols, rx = pr.range(1.3, 3.6), ry = rx * pr.range(0.5, 0.8), base = rows - pr.range(0, 1.5);
-        for (j = Math.floor(base - ry * 2); j <= rows; j++) {
-          for (i = Math.floor(sx - rx); i <= sx + rx; i++) {
-            var ex = (i + 0.5 - sx) / rx, ey = (j + 0.5 - (base - ry * 0.4)) / ry;
-            if (ex * ex + ey * ey > 1) continue;
-            cellAt(i, j, ey < -0.45 ? '#8b93a0' : '#59606c', 0.34 + 0.12 * U.hash(i, j, seed + 51));   // верх камня светлее
-          }
-        }
-      }
-    }
-    if (sc.corals) {
-      var nc = Math.round(sc.corals.n * cols / 100);
-      for (k = 0; k < nc; k++) {
-        var cc = sceneColor(sc.corals.colors[(pr() * sc.corals.colors.length) | 0]);
-        var bx = Math.floor(pr() * cols), arms = 2 + ((pr() * 3) | 0);
-        for (var arm = 0; arm < arms; arm++) {
-          var ax = bx, ay = rows - 1, hgt = 3 + ((pr() * 5) | 0);
-          for (j = 0; j < hgt; j++) {
-            cellAt(ax, ay, cc, 0.5 - 0.2 * (j / hgt));
-            glyphAt(ax, ay, j === hgt - 1 ? '*' : '#', cc, 0.55);
-            ay--;
-            if (pr() < 0.45) ax += pr() < 0.5 ? -1 : 1;
-          }
-        }
-      }
-    }
-    if (sc.shells) {
-      // ракушки и морские звёзды по всему берегу
-      var ns = Math.round(sc.shells.n * cols / 100);
+
+    // камни: светлее сверху-слева
+    if (g.stones) {
+      var ns = Math.round(g.stones.n * cols * rows / 10000);
       for (k = 0; k < ns; k++) {
-        var hx = Math.floor(pr() * cols), hy = Math.floor(pr() * rows);
-        var hc = sceneColor(sc.shells.colors[(pr() * sc.shells.colors.length) | 0]);
-        if (pr() < 0.45) {                                   // звезда: крестик из пяти ячеек
-          cellAt(hx, hy, hc, 0.42); glyphAt(hx, hy, '*', hc, 0.6);
-          cellAt(hx - 1, hy, hc, 0.24); cellAt(hx + 1, hy, hc, 0.24); cellAt(hx, hy - 1, hc, 0.24); cellAt(hx, hy + 1, hc, 0.24);
+        var sx = pr() * cols, sy = pr() * rows, rx = pr.range(0.9, 2.6), ry2 = rx * pr.range(0.6, 0.95);
+        var sv = rvAt(Math.floor(sx), Math.floor(sy));
+        if (sv < 0.25) continue;
+        for (j = Math.floor(sy - ry2); j <= sy + ry2; j++) {
+          for (i = Math.floor(sx - rx); i <= sx + rx; i++) {
+            var ex = (i + 0.5 - sx) / rx, ey = (j + 0.5 - sy) / ry2;
+            if (ex * ex + ey * ey > 1) continue;
+            cellAt(i, j, ex + ey < -0.5 ? '#8b93a0' : '#59606c', (0.22 + 0.1 * U.hash(i, j, seed + 51)) * sv * g.depth);
+          }
+        }
+      }
+    }
+
+    // пятна: цветы, кораллы, заросли
+    (g.blobs || []).forEach(function (bl) {
+      var nb = Math.round(bl.n * cols * rows / 10000);
+      for (k = 0; k < nb; k++) {
+        var bx = pr() * cols, by = pr() * rows, br = pr.range(bl.r[0], bl.r[1]);
+        var bv = rvAt(Math.floor(bx), Math.floor(by));
+        if (bv < 0.25) continue;
+        for (j = Math.floor(by - br); j <= by + br; j++) {
+          for (i = Math.floor(bx - br); i <= bx + br; i++) {
+            var dx = i + 0.5 - bx, dy = j + 0.5 - by;
+            if (dx * dx + dy * dy > br * br || pr() > bl.fill) continue;
+            var col = sceneColor(bl.colors[(pr() * bl.colors.length) | 0]);
+            cellAt(i, j, col, bl.a * 0.6 * bv * g.depth);
+            if (pr() < 0.6) glyphAt(i, j, bl.glyphs[(pr() * bl.glyphs.length) | 0], col, bl.a * bv * g.depth);
+          }
+        }
+      }
+    });
+
+    // ракушки и морские звёзды
+    if (g.shells) {
+      var nh = Math.round(g.shells.n * cols * rows / 10000);
+      for (k = 0; k < nh; k++) {
+        var hx = Math.floor(pr() * cols), hy = Math.floor(pr() * rows), hv = rvAt(hx, hy);
+        var hc = sceneColor(g.shells.colors[(pr() * g.shells.colors.length) | 0]);
+        if (hv < 0.25) continue;
+        if (pr() < 0.45) {
+          cellAt(hx, hy, hc, 0.4 * hv); glyphAt(hx, hy, '*', hc, 0.6 * hv);
+          cellAt(hx - 1, hy, hc, 0.22 * hv); cellAt(hx + 1, hy, hc, 0.22 * hv); cellAt(hx, hy - 1, hc, 0.22 * hv); cellAt(hx, hy + 1, hc, 0.22 * hv);
         } else {
-          cellAt(hx, hy, hc, 0.36); glyphAt(hx, hy, '@', hc, 0.55);
-          if (pr() < 0.5) { cellAt(hx + 1, hy, hc, 0.22); glyphAt(hx + 1, hy, ')', hc, 0.45); }
+          cellAt(hx, hy, hc, 0.34 * hv); glyphAt(hx, hy, '@', hc, 0.55 * hv);
         }
       }
     }
@@ -319,6 +388,8 @@
     var cd = grid.cd, cols = grid.cols, rows = grid.rows, i, j, k;
     var stops = Pal.ambient(species.id);
     var mid = C.css(stops[1]), light = C.css(stops[stops.length - 1]);
+
+    bakeGround(b, grid);                     // дно — самый нижний слой
 
     // пятна глубины: едва заметные области чуть светлее фона
     b.fillStyle = mid;
@@ -349,9 +420,9 @@
           }
         }
         // на части больших листьев — цветок лотоса
-        if (preset.scene && preset.scene.lotus && r > 3 && pr() < 0.55) {
+        if (preset.lotus && r > 3 && pr() < 0.55) {
           var lx = Math.floor(cx), ly = Math.floor(cy);
-          b.fillStyle = sceneColor(preset.scene.lotus);
+          b.fillStyle = sceneColor(preset.lotus);
           b.globalAlpha = 0.5; b.fillRect(lx * cd, ly * cd, cd - grid.gap, cd - grid.gap);
           b.globalAlpha = 0.26;
           b.fillRect((lx - 1) * cd, ly * cd, cd - grid.gap, cd - grid.gap); b.fillRect((lx + 1) * cd, ly * cd, cd - grid.gap, cd - grid.gap);
@@ -377,7 +448,6 @@
       }
     }
     b.globalAlpha = 1;
-    bakeScene(b, grid);
   };
 
   // ---------------------------------------------------------- обновление
@@ -566,6 +636,7 @@
     var cd = grid.cd, cl = grid.cell, gap = grid.gap, i, k, o, a;
     var img = A.colored, r0 = row * cd, r1 = (row + 1) * cd;
     var vis = fade * (0.5 + 0.5 * Am.level);
+    if (plants.length) drawPlants(ctx, grid, vis);      // подвижное дно — под полем и эффектами
 
     // поле: едва заметные тайлы
     var f = preset.field;
@@ -579,8 +650,6 @@
         for (i = 0; i < L.length; i += 2) ctx.fillRect(L[i] * cd, L[i + 1] * cd, cd - gap, cd - gap);
       }
     }
-
-    if (plants.length) drawPlants(ctx, grid, fade);
 
     var gDash = A.index['-'], gWave = A.index['~'], gDot = A.index['.'], gSmall = A.index['o'], gBig = A.index['O'];
 

@@ -342,6 +342,72 @@
     if (active) windowActive = true;
   };
 
+  // ---------------------------------------------------------- столкновения
+
+  var ca = [], cb = [];
+
+  /** Брошенные и взятые в руку существа сталкиваются с остальными: расталкиваются,
+   *  обмениваются импульсом и получают закрутку от удара не по центру. */
+  function collide() {
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (a.asm < 1) continue;
+      for (var j = i + 1; j < list.length; j++) {
+        var b = list[j];
+        if (b.asm < 1) continue;
+        if (!(a.held || a.thrown || b.held || b.thrown)) continue;   // спокойных разводит мягкое отталкивание
+        var ddx = b.x - a.x, ddy = b.y - a.y, reach = (a.radius + b.radius) * 1.7 + grid.cell * 4;
+        if (ddx * ddx + ddy * ddy > reach * reach) continue;
+        Cr.circles(a, ca); Cr.circles(b, cb);
+        // самое глубокое пересечение окружностей
+        var best = 0, nx = 0, ny = 0, px = 0, py = 0, pa = 0, pb = 0;
+        for (var k = 0; k < ca.length; k += 4) {
+          for (var m = 0; m < cb.length; m += 4) {
+            var dx = cb[m] - ca[k], dy = cb[m + 1] - ca[k + 1], rs = ca[k + 2] + cb[m + 2];
+            var d2 = dx * dx + dy * dy;
+            if (d2 >= rs * rs) continue;
+            var d = Math.sqrt(d2) || 0.01, pen = rs - d;
+            if (pen > best) {
+              best = pen; nx = dx / d; ny = dy / d;
+              px = ca[k] + nx * ca[k + 2]; py = ca[k + 1] + ny * ca[k + 2];
+              pa = ca[k + 3]; pb = cb[m + 3];
+            }
+          }
+        }
+        if (best <= 0) continue;
+        var ma = Cr.mass(a), mb = Cr.mass(b), ia = isFinite(ma) ? 1 / ma : 0, ib = isFinite(mb) ? 1 / mb : 0;
+        if (ia + ib === 0) continue;
+        // расталкиваем пропорционально лёгкости
+        var corr = Math.min(best, grid.cell * 2) / (ia + ib);
+        if (ia) Cr.nudge(a, -nx * corr * ia, -ny * corr * ia);
+        if (ib) Cr.nudge(b, nx * corr * ib, ny * corr * ib);
+        // импульс вдоль нормали, если сближаются
+        var va = Cr.velocityAt(a, pa), vb = Cr.velocityAt(b, pb);
+        var vn = (vb[0] - va[0]) * nx + (vb[1] - va[1]) * ny;
+        if (vn > -CFG.HIT_MIN) continue;
+        var jn = -(1 + CFG.BOUNCE) * vn / (ia + ib);
+        // закрутка: удар мимо центра тела крутит его
+        var sa = ((px - a.x) * -ny + (py - a.y) * nx) / Math.max(1, a.radius * a.radius) * jn * ia * 0.8;
+        var sb = ((px - b.x) * ny - (py - b.y) * nx) / Math.max(1, b.radius * b.radius) * jn * ib * 0.8;
+        Cr.kick(a, -nx * jn * ia, -ny * jn * ia, sa, pa);
+        Cr.kick(b, nx * jn * ib, ny * jn * ib, sb, pb);
+        if (a.excite < 0.9) a.excite = 0.9;
+        if (b.excite < 0.9) b.excite = 0.9;
+        // искры от сильного удара, круг на воде
+        var hit = Math.min(1, -vn / 600);
+        if (hit > 0.15) {
+          var rows = A.coloredRows || 1;
+          for (var q = 0; q < 3 + hit * 8; q++) {
+            var an = rnd() * U.TAU, sp = rnd.range(40, 160) * hit;
+            Pt.spawn(px, py, Math.cos(an) * sp, Math.sin(an) * sp, rnd.range(0.3, 0.7),
+              CFG.DUST[(rnd() * CFG.DUST.length) | 0], (rnd() * rows) | 0, 0.7);
+          }
+          if (Am.water) Am.ripple(px, py, 3 + hit * 5);
+        }
+      }
+    }
+  }
+
   // ------------------------------------------------------------------ кадр
 
   function step(dt) {
@@ -351,8 +417,13 @@
       c = list[i];
       if (c.asmDelay > 0) c.asmDelay -= dt;
       else if (c.asm < 1) c.asm = Math.min(1, c.asm + dt / c.asmDur);
+      var px0 = c.x, py0 = c.y;
       c.update(dt, env);
+      // скорость по перемещению — для столкновений (перескок через край не считается)
+      var mvx = (c.x - px0) / dt, mvy = (c.y - py0) / dt;
+      if (dt > 0 && Math.abs(mvx) < 3000 && Math.abs(mvy) < 3000) { c.velX = mvx; c.velY = mvy; }
     }
+    collide();
     // лёгкое отталкивание, чтобы существа не сливались в одно пятно
     for (i = 0; i < list.length; i++) {
       var a = list[i];

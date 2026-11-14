@@ -101,6 +101,7 @@
     if (tx * tx + ty * ty < best) g = NODES - 1;
     this.grabNode = g;
     this.grabbed = { node: g };
+    this.omega = 0; this.axisPrev = null;
     for (i = 0; i < NODES; i++) { this.vx[i] = this.vy[i] = 0; }
   };
 
@@ -108,13 +109,55 @@
     // узел, за который держали, уходит со скоростью руки и тянет за собой тело
     var sp = Math.sqrt(hvx * hvx + hvy * hvy), g = this.grabNode;
     if (sp > CFG.THROW_MAX) { hvx *= CFG.THROW_MAX / sp; hvy *= CFG.THROW_MAX / sp; }
-    this.vx[g] = hvx; this.vy[g] = hvy;
+    // всё тело уходит со скоростью руки, плюс вращение вокруг точки хвата — рыбу закручивает
+    var w = U.clamp(this.omega || 0, -CFG.SPIN_MAX, CFG.SPIN_MAX);
+    for (var k = 0; k < NODES; k++) {
+      var rx = this.nx[k] - this.nx[g], ry = this.ny[k] - this.ny[g];
+      this.vx[k] = hvx - w * ry; this.vy[k] = hvy + w * rx;
+    }
     // запас скорости броска: по нему возвращается управление (своё плавание в него не входит)
     var sum = 0;
     for (var i = 0; i < NODES; i++) sum += Math.sqrt(this.vx[i] * this.vx[i] + this.vy[i] * this.vy[i]);
     this.throwV = sum / NODES;
     this.grabbed = null;
     this.thrown = true;
+  };
+
+  /** Ставит узел i ровно на длину звена от узла j. */
+  Koi.prototype.link = function (i, j) {
+    var dx = this.nx[i] - this.nx[j], dy = this.ny[i] - this.ny[j];
+    var d = Math.sqrt(dx * dx + dy * dy) || 1;
+    this.nx[i] = this.nx[j] + dx / d * this.seg; this.ny[i] = this.ny[j] + dy / d * this.seg;
+  };
+
+  /** Форма для столкновений: окружности вдоль тела. */
+  Koi.prototype.circles = function (out) {
+    for (var i = 0; i < NODES; i += 2) out.push(this.dx[i], this.dy[i], this.r[i] + this.cell * 0.4, i);
+  };
+
+  Koi.prototype.velocityAt = function (node) {
+    if (this.held || this.thrown) return [this.vx[node], this.vy[node]];
+    return [this.velX || 0, this.velY || 0];
+  };
+
+  /** Удар: узел, в который попали, получает импульс сильнее остальных — рыбу разворачивает. */
+  Koi.prototype.kick = function (ix, iy, node) {
+    var i;
+    if (!this.held && !this.thrown) {
+      // начинаем с текущего движения, чтобы рыба не замирала на месте
+      for (i = 0; i < NODES; i++) { this.vx[i] = this.velX || 0; this.vy[i] = this.velY || 0; }
+      this.thrown = true; this.throwV = 0;
+    }
+    for (i = 0; i < NODES; i++) {
+      var w = 0.55 + 0.9 * Math.max(0, 1 - Math.abs(i - node) / 3);
+      this.vx[i] += ix * w; this.vy[i] += iy * w;
+    }
+    this.throwV = Math.max(this.throwV || 0, Math.sqrt(ix * ix + iy * iy));
+  };
+
+  Koi.prototype.nudge = function (dx, dy) {
+    this.x += dx; this.y += dy;
+    for (var i = 0; i < NODES; i++) { this.nx[i] += dx; this.ny[i] += dy; this.dx[i] += dx; this.dy[i] += dy; }
   };
 
   /** Цепочка с инерцией: узлы летят сами, звенья держат длину, тело упруго
@@ -160,12 +203,20 @@
         this.ny[i] += ((this.ny[i - 1] + this.ny[i + 1]) / 2 - this.ny[i]) * 0.1;
       }
     }
+    // жёсткий проход от точки опоры к концам: звенья ровно своей длины, тело не тянется резиной
+    var a0 = g >= 0 ? g : n >> 1;
+    for (i = a0 + 1; i < n; i++) this.link(i, i - 1);
+    for (i = a0 - 1; i >= 0; i--) this.link(i, i + 1);
     for (i = 0; i < n; i++) {
       this.vx[i] = U.clamp((this.nx[i] - this.ox[i]) / dt, -2600, 2600);
       this.vy[i] = U.clamp((this.ny[i] - this.oy[i]) / dt, -2600, 2600);
     }
     this.x = this.nx[0]; this.y = this.ny[0];
     this.heading = Math.atan2(this.ny[0] - this.ny[1], this.nx[0] - this.nx[1]);
+    // угловая скорость всего тела (от хвоста к голове) — для броска с закруткой
+    var axis = Math.atan2(this.ny[0] - this.ny[n - 1], this.nx[0] - this.nx[n - 1]);
+    if (this.axisPrev != null) this.omega += (U.angDiff(this.axisPrev, axis) / dt - (this.omega || 0)) * Math.min(1, dt * 20);
+    this.axisPrev = axis;
     this.pushX = this.pushY = 0;
     this.excite = Math.max(this.excite * Math.exp(-1.1 * dt), this.held ? 0.85 : 1 - ctrl);
     if (!this.held) {
@@ -234,6 +285,7 @@
     // волна по телу, амплитуда растёт к хвосту
     this.wave += (2.6 + v * 0.11) * dt;
     var amp = this.cell * this.scale * (0.5 + 0.55 * Math.min(1.6, v / 30));
+    if (this.held || this.thrown) amp *= 0.55;              // изогнутое тело не «гуляет» волной
     for (i = 0; i < NODES; i++) {
       var p = i === 0 ? 1 : i;
       var tx = this.nx[p - 1] - this.nx[p], ty = this.ny[p - 1] - this.ny[p];
@@ -241,6 +293,12 @@
       var off = amp * Math.pow(i / (NODES - 1), 1.6) * Math.sin(this.wave - i * WAVE);
       this.dx[i] = this.nx[i] - ty / tl * off;
       this.dy[i] = this.ny[i] + tx / tl * off;
+    }
+    // нарисованное тело не длиннее хребта: волна гнёт, но не растягивает
+    for (i = 1; i < NODES; i++) {
+      var sx = this.dx[i] - this.dx[i - 1], sy = this.dy[i] - this.dy[i - 1];
+      var sl = Math.sqrt(sx * sx + sy * sy), mx = this.seg * 1.12;
+      if (sl > mx) { this.dx[i] = this.dx[i - 1] + sx / sl * mx; this.dy[i] = this.dy[i - 1] + sy / sl * mx; }
     }
     for (i = 0; i < NODES - 1; i++) {
       this.ex[i] = this.dx[i + 1] - this.dx[i]; this.ey[i] = this.dy[i + 1] - this.dy[i];

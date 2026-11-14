@@ -169,6 +169,50 @@
     Cr.wrap(c, env);
   };
 
+  // ------------------------------------------------------------ столкновения
+
+  /** Форма тела для столкновений: окружности [x, y, r, часть, ...]. */
+  Cr.circles = function (c, out) {
+    out.length = 0;
+    if (c.circles) { c.circles(out); return out; }
+    out.push(c.hx == null ? c.x : c.hx, c.hy == null ? c.y : c.hy, Math.max(CFG.GRAB_MIN_RADIUS * 0.6, c.radius * 0.5), 0);
+    return out;
+  };
+
+  /** Масса: пропорциональна площади тела; взятое в руку — неподвижная опора. */
+  Cr.mass = function (c) {
+    if (c.held) return Infinity;
+    var r = c.radius / c.cell;
+    return Math.max(4, r * r);
+  };
+
+  Cr.velocityAt = function (c, part) {
+    if (c.velocityAt) return c.velocityAt(part);
+    if (c.held && c.grabbed) return [c.grabbed.tvx, c.grabbed.tvy];
+    if (c.thrown) return [c.tvx, c.tvy];
+    return [c.velX || 0, c.velY || 0];
+  };
+
+  /** Импульс от удара: скорость и закрутка; заметный удар выбивает из управления. */
+  Cr.kick = function (c, ix, iy, spin, part) {
+    if (c.held) return;
+    if (c.kick) { c.kick(ix, iy, part); return; }
+    if (!c.thrown) {
+      c.thrown = true;
+      c.tvx = (c.velX || 0) * 0.5; c.tvy = (c.velY || 0) * 0.5; c.spin = 0;
+    }
+    c.tvx += ix; c.tvy += iy;
+    c.spin = U.clamp((c.spin || 0) + spin, -CFG.SPIN_MAX, CFG.SPIN_MAX);
+  };
+
+  /** Сдвиг без «телепорта» хвостов и щупалец. */
+  Cr.nudge = function (c, dx, dy) {
+    if (c.nudge) { c.nudge(dx, dy); return; }
+    c.x += dx; c.y += dy;
+    if (c.hx != null) { c.hx += dx; c.hy += dy; }
+    if (c.shift) c.shift(dx, dy);
+  };
+
   /** Насколько точка близко к существу: < 1 — можно ухватить. */
   Cr.hit = function (c, x, y) {
     if (c.hit) return c.hit(x, y);
