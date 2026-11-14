@@ -14,50 +14,64 @@
   // ----------------------------------------------------------- переключатель
 
   function buildSwitcher() {
-    var nav = $('species-list');
+    var list = $('species-list');
     CFG.SPECIES_ORDER.forEach(function (id, i) {
       var b = document.createElement('button');
       b.type = 'button';
+      b.setAttribute('role', 'menuitemradio');
       b.dataset.species = id;
-      b.title = GP.species[id].label + (i < 10 ? ' — ' + ((i + 1) % 10) : '');
       var dot = document.createElement('i');
       dot.className = 'dot';
       dot.style.background = 'var(--dot-' + id + ')';
       b.appendChild(dot);
       b.appendChild(document.createTextNode(GP.species[id].label));
-      b.addEventListener('click', function () { UI.select(id); });
-      nav.appendChild(b);
+      if (i < 10) {                                     // подсказка клавиши: 1–9, затем 0
+        var k = document.createElement('span');
+        k.className = 'key'; k.textContent = (i + 1) % 10;
+        b.appendChild(k);
+      }
+      b.addEventListener('click', function () { UI.select(id); openPop(false); $('species-btn').focus({ preventScroll: true }); });
+      list.appendChild(b);
     });
   }
 
   function markSwitcher() {
-    var list = $('species-list'), bs = list.querySelectorAll('button');
+    var bs = $('species-list').querySelectorAll('button');
     for (var i = 0; i < bs.length; i++) {
-      var on = bs[i].dataset.species === settings.species;
-      bs[i].setAttribute('aria-pressed', on ? 'true' : 'false');
-      if (on && !settings.pickerHidden && list.scrollWidth > list.clientWidth) {
-        list.scrollLeft = bs[i].offsetLeft - (list.clientWidth - bs[i].offsetWidth) / 2;
-      }
+      bs[i].setAttribute('aria-checked', bs[i].dataset.species === settings.species ? 'true' : 'false');
     }
-    $('picker-dot').style.background = 'var(--dot-' + settings.species + ')';
+    $('species-name').textContent = GP.species[settings.species].label;
+    $('species-dot').style.background = 'var(--dot-' + settings.species + ')';
   }
 
-  /** Панель видов сворачивается в маленькую кнопку с точкой текущего вида. */
-  function applyPicker() {
-    var hidden = !!settings.pickerHidden;
-    $('switcher').classList.toggle('collapsed', hidden);
-    var t = $('picker-toggle');
-    t.setAttribute('aria-expanded', hidden ? 'false' : 'true');
-    var label = hidden ? 'Show creature picker' : 'Hide creature picker';
-    t.title = label; t.setAttribute('aria-label', label);
-    $('set-picker').checked = !hidden;
+  // ------------------------------------------------------ скрытое управление
+
+  var chromeEl = null, chromeT = 0;
+
+  /** Нельзя гасить, пока что-то открыто, курсор над капсулой или фокус на ней с клавиатуры. */
+  function chromeBusy() {
+    return !$('settings').hidden || !$('species-pop').hidden || chromeEl.matches(':hover') ||
+      !!chromeEl.querySelector(':focus-visible');
   }
 
-  function setPicker(hidden) {
-    settings.pickerHidden = hidden;
-    applyPicker();
-    markSwitcher();
-    save();
+  function maybeHide() {
+    if (chromeBusy()) { chromeT = setTimeout(maybeHide, 900); return; }
+    chromeEl.classList.remove('show');
+  }
+
+  /** Показывает капсулу; ms — через сколько гасить, если больше ничего не происходит. */
+  function showChrome(ms) {
+    chromeEl.classList.add('show');
+    clearTimeout(chromeT);
+    chromeT = setTimeout(maybeHide, ms || 2600);
+  }
+
+  function inChromeZone(e) { return e.clientY < 64 && e.clientX > window.innerWidth - 480; }
+
+  function openPop(open) {
+    $('species-pop').hidden = !open;
+    $('species-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) { openSettings(false); showChrome(); }
   }
 
   /** Соседний вид по кругу: dir = 1 — следующий, −1 — предыдущий. */
@@ -339,9 +353,19 @@
     { id: 'effects', key: 'effects', k: 100, off: true }
   ];
 
+  /** Подсказка «hold · drag» показывается один раз и гаснет сама: через 9 с или после первого хвата. */
+  var hintT = 0;
+  function fadeHint() {
+    var h = $('hint');
+    h.classList.remove('gone');
+    clearTimeout(hintT);
+    hintT = setTimeout(function () { h.classList.add('gone'); }, 9000);
+  }
+
   function openSettings(open) {
     $('settings').hidden = !open;
     $('settings-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) { $('species-pop').hidden = true; $('species-btn').setAttribute('aria-expanded', 'false'); showChrome(); }
   }
 
   function markColor() {
@@ -371,6 +395,7 @@
     markColor();
 
     $('settings-btn').addEventListener('click', function () { openSettings($('settings').hidden); });
+    $('species-btn').addEventListener('click', function () { openPop($('species-pop').hidden); });
 
     SLIDERS.forEach(function (sl) {
       var el = $('set-' + sl.id);
@@ -387,7 +412,7 @@
     // переключатели: ключ настройки и что сделать при смене
     [
       ['paused', function (v) { Scene.set({ paused: v }); }],
-      ['hint', function (v) { $('hint').hidden = !v; }],
+      ['hint', function (v) { $('hint').hidden = !v; if (v) fadeHint(); }],
       ['saver', function (v) { Scene.set({ saver: v }); }],
       ['voice', voiceUi],
       ['voiceAuto', null]
@@ -402,10 +427,6 @@
     });
 
     buildTints();
-    $('picker-toggle').addEventListener('click', function () { setPicker(!settings.pickerHidden); });
-    $('set-picker').addEventListener('change', function () { setPicker(!this.checked); });
-    applyPicker();
-
     $('set-name').addEventListener('input', function () {
       settings.name = this.value; greeting(); save();
     });
@@ -451,6 +472,7 @@
   function bindInput() {
     var canvas = $('scene'), dragging = false;
     window.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'mouse' && inChromeZone(e)) showChrome();
       if (e.pointerType === 'touch') return;
       Scene.pointer(e.clientX, e.clientY, true);
     }, { passive: true });
@@ -462,6 +484,7 @@
       if (!$('settings').hidden) { openSettings(false); return; }
       if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
       if (Scene.grab(e.clientX, e.clientY)) {
+        $('hint').classList.add('gone');
         dragging = true;
         try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* указатель уже отпущен */ }
         canvas.style.cursor = 'grabbing';
@@ -487,7 +510,10 @@
 
     document.addEventListener('pointerdown', function (e) {
       if (!$('settings').hidden && !e.target.closest('#settings, #settings-btn')) openSettings(false);
+      if (!$('species-pop').hidden && !e.target.closest('#species-pop, #species-btn')) openPop(false);
+      if (e.pointerType === 'touch' && inChromeZone(e) && !e.target.closest('#chrome')) showChrome(5000);   // на касаниях нет наведения
     });
+    $('chrome-handle').addEventListener('click', function () { showChrome(5000); });
 
     $('search').addEventListener('submit', function (e) {
       e.preventDefault();
@@ -498,6 +524,7 @@
       var t = e.target;
       var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
       if (e.key === 'Escape') {
+        if (!$('species-pop').hidden) { openPop(false); $('species-btn').focus({ preventScroll: true }); return; }
         if (!$('settings').hidden) openSettings(false);
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         return;
@@ -527,10 +554,15 @@
     markSwitcher();
     greeting();
     setInterval(greeting, 30000);
+    chromeEl = $('chrome');
+    chromeEl.addEventListener('focusin', function (e) { if (e.target.matches(':focus-visible')) showChrome(); });
     bindSettings();
     bindInput();
     bindVoice();
     zone();
+    if (settings.hint) fadeHint();
+    // при первом запуске капсула на секунду показывается, чтобы было видно, где управление
+    if (!settings.seen) { settings.seen = true; save(); showChrome(3400); }
     Pal.onChange = function () { Scene.paletteChanged(); markColor(); };
   };
 })(window.GP);

@@ -30,7 +30,7 @@
     dust: 1,
     effects: 1,
     ground: 1,
-    pickerHidden: false,
+    seen: false,
     tints: {},
     tintAll: '',
     voice: true,
@@ -68,7 +68,7 @@
     var num = function (key, lo, hi) { var v = +s[key]; s[key] = U.clamp(isNaN(v) ? DEFAULTS[key] : v, lo, hi); };
     num('speed', 0.25, 2); num('size', 0.6, 1.6); num('react', 0, 2);
     num('grid', 0, 2); num('dust', 0, 2); num('effects', 0, 2); num('ground', 0, 2);
-    s.pickerHidden = !!s.pickerHidden;
+    s.seen = !!s.seen;
     // принудительные цвета: только #rrggbb; копия, чтобы не портить DEFAULTS
     var hex6 = /^#[0-9a-f]{6}$/i, tints = {};
     if (s.tints && typeof s.tints === 'object') {

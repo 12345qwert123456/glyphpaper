@@ -37,87 +37,109 @@ button:disabled { cursor: default; }
 
 :focus-visible { outline: 1.5px solid rgba(var(--ui-text), 0.55); outline-offset: 2px; }
 
-/* ------------------------------------------------- верхняя панель-переключатель */
+/* ------------------------------------------------------------ скрытое управление */
+/* В покое на экране нет ничего, кроме приветствия и поиска: в углу — едва заметные три точки.
+   Капсула появляется по наведению на угол, по Tab или по касанию и гаснет после паузы. */
 
-.pill {
+.chrome {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  top: 14px;
+  right: 16px;
+  width: 32px;
   height: 32px;
-  padding: 3px;
-  max-width: calc(100vw - 112px);
-  border-radius: 16px;
-  background: rgba(var(--ui-surface), 0.72);
-  border: 1px solid rgba(var(--ui-text), 0.08);
-  z-index: 3;
+  z-index: 5;
 }
 
-.species-list {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.species-list::-webkit-scrollbar { display: none; }
-
-.pill button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 24px;
-  padding: 0 10px 0 8px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: rgba(var(--ui-text), 0.55);
-  font-size: 11.5px;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  transition: background-color 120ms ease, color 120ms ease;
-}
-.pill button:hover { background: rgba(var(--ui-text), 0.07); color: rgba(var(--ui-text), 0.88); }
-.pill button[aria-pressed="true"] { background: rgba(var(--ui-text), 0.14); color: rgb(var(--ui-text)); }
-.pill .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-
-/* кнопка сворачивания панели видов */
-.pill .picker-toggle { flex: none; margin-left: 2px; padding: 0 8px; gap: 5px; border-left: 1px solid rgba(var(--ui-text), 0.08); border-radius: 0 12px 12px 0; }
-.pill .picker-toggle svg { transition: transform 160ms ease; }
-.pill .picker-toggle .dot { display: none; }
-.pill.collapsed .species-list { display: none; }
-.pill.collapsed .picker-toggle { margin: 0; border-left: 0; border-radius: 12px; padding: 0 10px; }
-.pill.collapsed .picker-toggle .dot { display: block; }
-.pill.collapsed .picker-toggle svg { transform: rotate(180deg); }
-
-/* ------------------------------------------------------------- настройки */
-
-.round {
-  position: fixed;
-  top: 20px;
-  right: 20px;
+.handle {
   width: 32px;
   height: 32px;
   display: grid;
   place-items: center;
   padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: rgba(var(--ui-surface), 0.72);
-  border: 1px solid rgba(var(--ui-text), 0.08);
-  color: rgba(var(--ui-text), 0.6);
-  transition: background-color 120ms ease, color 120ms ease;
-  z-index: 4;
+  background: transparent;
+  color: rgba(var(--ui-text), 0.34);
+  transition: color 200ms ease, opacity 160ms ease;
 }
-.round:hover, .round[aria-expanded="true"] { color: rgb(var(--ui-text)); background: rgba(var(--ui-surface), 0.9); }
+.handle:hover, .handle:focus-visible { color: rgba(var(--ui-text), 0.85); }
+.chrome.show .handle { opacity: 0; pointer-events: none; }
+
+.bar {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 18px;
+  background: rgba(var(--ui-surface), 0.82);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.chrome.show .bar { opacity: 1; transform: none; pointer-events: auto; }
+
+.bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 10px 0 11px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: rgba(var(--ui-text), 0.78);
+  font-size: 12px;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.bar-btn:hover, .bar-btn[aria-expanded="true"] { background: rgba(var(--ui-text), 0.09); color: rgb(var(--ui-text)); }
+.bar-btn.icon { width: 30px; padding: 0; justify-content: center; }
+.bar-sep { width: 1px; height: 16px; background: rgba(var(--ui-text), 0.1); margin: 0 1px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+/* выпадающий список видов: сетка 3×4 */
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 346px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(var(--ui-surface), 0.96);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+}
+.popover[hidden] { display: none; }
+.species-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.species-grid button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(var(--ui-text), 0.68);
+  font-size: 12.5px;
+  text-align: left;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.species-grid button:hover { background: rgba(var(--ui-text), 0.07); color: rgba(var(--ui-text), 0.95); }
+.species-grid button[aria-checked="true"] { background: rgba(var(--ui-text), 0.14); color: rgb(var(--ui-text)); }
+.species-grid .key { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: rgba(var(--ui-text), 0.3); }
+
+/* ------------------------------------------------------------- настройки */
 
 .panel {
   position: fixed;
-  top: 62px;
-  right: 20px;
+  top: 60px;
+  right: 16px;
   width: 284px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 82px);
@@ -346,21 +368,20 @@ button:disabled { cursor: default; }
   pointer-events: none;
   user-select: none;
   z-index: 2;
+  transition: opacity 1.4s ease;
 }
 #hint[hidden] { display: none; }
+#hint.gone { opacity: 0; }
 
 /* ------------------------------------------------------------ адаптивность */
 
-@media (max-width: 720px) {
-  .pill { left: 16px; right: 60px; transform: none; max-width: none; }
-}
 @media (max-height: 420px) {
   .orb { display: none; }
   #center { top: 58%; }
 }
 
 /* режим обоев: только сцена */
-body.wallpaper .pill, body.wallpaper .round, body.wallpaper .panel,
+body.wallpaper #chrome, body.wallpaper .panel,
 body.wallpaper #center, body.wallpaper #hint { display: none !important; }
 body.wallpaper { cursor: none; }
 

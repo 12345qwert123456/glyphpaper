@@ -12,19 +12,28 @@
 <body>
   <canvas id="scene" aria-hidden="true"></canvas>
 
-  <nav id="switcher" class="pill" aria-label="Creatures">
-    <div id="species-list" class="species-list"></div>
-    <button id="picker-toggle" class="picker-toggle" type="button" aria-label="Hide creature picker" title="Hide creature picker" aria-expanded="true">
-      <i id="picker-dot" class="dot"></i>
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+  <!-- Управление скрыто: в покое виден только едва заметный «язычок» (три точки) в углу.
+       Капсула с выбором вида и настройками появляется по наведению на угол, по Tab и по касанию. -->
+  <header id="chrome" class="chrome">
+    <button id="chrome-handle" class="handle" type="button" aria-label="Menu" title="Menu">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
     </button>
-  </nav>
-
-  <button id="settings-btn" class="round" type="button" aria-label="Settings" aria-expanded="false" aria-controls="settings">
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>
-    </svg>
-  </button>
+    <div id="bar" class="bar" role="toolbar" aria-label="Controls">
+      <button id="species-btn" class="bar-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="species-pop" title="Creature — 1–9, 0 or [ ] to switch">
+        <i id="species-dot" class="dot"></i><span id="species-name"></span>
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <span class="bar-sep" aria-hidden="true"></span>
+      <button id="settings-btn" class="bar-btn icon" type="button" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settings">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>
+        </svg>
+      </button>
+      <div id="species-pop" class="popover" role="menu" aria-label="Creatures" hidden>
+        <div id="species-list" class="species-grid"></div>
+      </div>
+    </div>
+  </header>
 
   <section id="settings" class="panel" hidden aria-label="Settings">
     <h2>Greeting</h2>
@@ -84,9 +93,6 @@
       <span>Voice language <small>empty = browser</small></span>
       <input id="set-voiceLang" type="text" maxlength="12" placeholder="ru-RU, en-US…" autocomplete="off" spellcheck="false">
     </label>
-
-    <h2>Interface</h2>
-    <label class="toggle"><input id="set-picker" type="checkbox"><span>Show creature picker</span></label>
 
     <h2>Animation</h2>
     <label class="toggle"><input id="set-paused" type="checkbox"><span>Pause animation</span></label>
