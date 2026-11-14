@@ -18,7 +18,13 @@
   var current = null;
   var opts = {
     cell: CFG.CELL, countScale: 1, density: CFG.GLYPH_DENSITY,
-    paused: false, saver: false, adapt: true, wallpaper: false, fps: 0, ambient: true
+    paused: false, saver: false, adapt: true, wallpaper: false, fps: 0,
+    speed: 1,      // множитель скорости существ
+    size: 1,       // множитель размера существ
+    react: 1,      // сила реакции на курсор (0 — не реагируют)
+    effects: 1,    // количество эффектов среды (0 — выключены)
+    dust: 1,       // количество «пыли» от существ
+    grid: 1        // заметность сетки
   };
   var autoCell = 0, particleScale = 1, ambientScale = 1;
   var reduced = false;
@@ -29,9 +35,15 @@
   var env = {
     W: 0, H: 0, cell: CFG.CELL, time: 0,
     mouse: { x: 0, y: 0, active: false },
-    zone: null, list: list, reduced: false,
+    zone: null, list: list, reduced: false, react: 1,
     dust: function (x, y, vx, vy, life, glyph, shade, alpha) {
+      var d = opts.dust;
+      if (d < 1 && rnd() >= d) return;
       Pt.spawn(x, y, vx, vy, life, glyph, shade, alpha);
+      if (d > 1 && rnd() < d - 1) {
+        Pt.spawn(x + rnd.range(-1, 1) * grid.cell * 1.5, y + rnd.range(-1, 1) * grid.cell * 1.5,
+          vx, vy, life * rnd.range(0.6, 1.1), glyph, shade, alpha);
+      }
     },
     rnd: rnd
   };
@@ -45,7 +57,7 @@
     var b = bg.getContext('2d');
     b.fillStyle = C.css(Pal.bg());
     b.fillRect(0, 0, bg.width, bg.height);
-    b.fillStyle = 'rgba(' + CFG.GRID_RGB.join(',') + ',' + CFG.GRID_ALPHA_BASE + ')';
+    b.fillStyle = 'rgba(' + CFG.GRID_RGB.join(',') + ',' + (CFG.GRID_ALPHA_BASE * opts.grid) + ')';
     var cd = grid.cd, gap = grid.gap, k;
     for (k = 1; k <= grid.cols; k++) b.fillRect(k * cd - gap, 0, gap, bg.height);
     for (k = 1; k <= grid.rows; k++) b.fillRect(0, k * cd - gap, bg.width, gap);
@@ -89,7 +101,7 @@
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     grid.cols = Math.ceil(canvas.width / grid.cd);
     grid.rows = Math.ceil(canvas.height / grid.cd);
-    env.W = W; env.H = H; env.cell = grid.cell;
+    env.W = W; env.H = H; env.cell = grid.cell * opts.size;
     Am.resize(W, H, grid.cell);
     bgFade = 1;
     A.build(grid.cd);
@@ -165,6 +177,7 @@
   }
 
   function dissolve(c) {
+    if (c === held) { held = null; c.held = null; }
     var cells = [];
     R.draw(c, cells);
     Db.add(cells, (c.hx == null ? c.x : c.hx) * grid.dpr, (c.hy == null ? c.y : c.hy) * grid.dpr, rnd, grid.dpr);
@@ -206,8 +219,16 @@
 
   // ------------------------------------------------------------ настройки
 
+  function particleCap() {
+    return Math.min(Pt.max, Math.round(CFG.PARTICLES_MAX * particleScale * (opts.saver ? 0.5 : 1) * Math.max(0.25, opts.dust)));
+  }
+
+  function ambientLevel() {
+    return opts.effects * (reduced ? 0.4 : opts.saver ? 0.6 : 1) * ambientScale;
+  }
+
   S.set = function (o) {
-    var regrid = false, recount = false;
+    var regrid = false, recount = false, rebg = false;
     if (o.cell != null && o.cell !== opts.cell) { opts.cell = o.cell; autoCell = 0; regrid = true; }
     if (o.countScale != null && o.countScale !== opts.countScale) { opts.countScale = o.countScale; recount = true; }
     if (o.density != null) opts.density = o.density;
@@ -216,44 +237,115 @@
     if (o.adapt != null) opts.adapt = o.adapt;
     if (o.wallpaper != null) opts.wallpaper = o.wallpaper;
     if (o.fps != null) opts.fps = o.fps;
-    var reAmbient = o.ambient != null && o.ambient !== opts.ambient;
-    if (reAmbient) opts.ambient = o.ambient;
-    Am.enabled = opts.ambient;
-    Am.level = (reduced ? 0.4 : opts.saver ? 0.6 : 1) * ambientScale;
+    if (o.speed != null) opts.speed = o.speed;
+    if (o.react != null) opts.react = o.react;
+    if (o.dust != null) opts.dust = o.dust;
+    if (o.size != null && o.size !== opts.size) { opts.size = o.size; env.cell = grid.cell * opts.size; }
+    if (o.grid != null && o.grid !== opts.grid) { opts.grid = o.grid; rebg = true; }
+    if (o.effects != null && o.effects !== opts.effects) {
+      if ((o.effects > 0) !== (opts.effects > 0)) rebg = true;
+      opts.effects = o.effects;
+    }
+    env.react = opts.react;
+    Am.enabled = opts.effects > 0.01;
+    Am.level = ambientLevel();
     if (canvas) {
       if (regrid) rebuildGrid();
-      else if (reAmbient) rebuildBg();
+      else if (rebg) rebuildBg();
       if (recount) fitCount();
-      Pt.cap = Math.round(CFG.PARTICLES_MAX * particleScale * (opts.saver ? 0.5 : 1));
+      Pt.cap = particleCap();
     }
     dirty = true;
   };
 
   S.setZone = function (z) { env.zone = z; };
 
-  /** Клик по фону: импульс от точки и всплеск «пыли». */
-  S.scatter = function (x, y) {
-    if (reduced || opts.wallpaper) return;
-    var i;
-    Am.ripple(x, y, 10);
-    for (i = 0; i < list.length; i++) Cr.impulse(list[i], x, y, CFG.CLICK_IMPULSE * rnd.range(0.75, 1.25));
+  // ------------------------------------------------- взять и перетащить
+
+  var held = null, hold = { x: 0, y: 0 }, offX = 0, offY = 0;
+  var lastX = 0, lastY = 0, lastT = 0, velX = 0, velY = 0;
+
+  /** Существо под точкой (верхнее из подходящих) или null. */
+  S.pick = function (x, y) {
+    var best = null, bq = 1;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var c = list[i];
+      if (c.asm < 1) continue;
+      var q = Cr.hit(c, x, y);
+      if (q < bq) { bq = q; best = c; }
+    }
+    return best;
+  };
+
+  /** Зажали указатель: если под ним существо — берём его «в руку». */
+  S.grab = function (x, y) {
+    if (opts.wallpaper || opts.paused) return false;
+    var c = S.pick(x, y);
+    if (!c) return false;
+    held = c;
+    offX = c.x - x; offY = c.y - y;
+    hold.x = c.x; hold.y = c.y;
+    c.held = hold;
+    c.brightFree = c.bright;
+    c.bright = Math.min(1.12, c.bright * 1.2);      // в руке чуть ярче — будто ближе
+    lastX = x; lastY = y; lastT = performance.now(); velX = velY = 0;
+    env.mouse.active = false;                        // остальные руку не пугаются
+    return true;
+  };
+
+  S.drag = function (x, y) {
+    if (!held) return;
+    var now = performance.now(), dt = Math.max(1, now - lastT) / 1000;
+    velX += ((x - lastX) / dt - velX) * 0.35; velY += ((y - lastY) / dt - velY) * 0.35;
+    lastX = x; lastY = y; lastT = now;
+    hold.x = x + offX; hold.y = y + offY;
+  };
+
+  /** Отпустили: существо уплывает дальше, сохраняя движение руки. */
+  S.release = function () {
+    if (!held) return;
+    var c = held;
+    held = null;
+    c.held = null;
+    c.bright = c.brightFree;
+    if (performance.now() - lastT > 120) velX = velY = 0;     // рука остановилась — броска нет
+    var sp = Math.sqrt(velX * velX + velY * velY);
+    if (sp > CFG.THROW_MAX) { velX *= CFG.THROW_MAX / sp; velY *= CFG.THROW_MAX / sp; sp = CFG.THROW_MAX; }
+    c.pushX = velX * 0.8; c.pushY = velY * 0.8;
+    if (sp > 150 && c.onScare) c.onScare(velX / sp, velY / sp);
+    if (Am.water) Am.ripple(c.x, c.y, 6);
+  };
+
+  S.holding = function () { return !!held; };
+
+  /** Короткое нажатие по пустому месту: круг на воде и щепотка «пыли». */
+  S.tap = function (x, y) {
+    if (opts.wallpaper) return;
+    Am.ripple(x, y, 9);
+    if (reduced) return;
     var rows = A.coloredRows || 1;
-    for (i = 0; i < 30; i++) {
-      var a = rnd() * U.TAU, sp = rnd.range(50, 260);
-      Pt.spawn(x + Math.cos(a) * 6, y + Math.sin(a) * 6, Math.cos(a) * sp, Math.sin(a) * sp,
-        rnd.range(0.5, 1.2), CFG.DUST[(rnd() * CFG.DUST.length) | 0], (rnd() * rows) | 0, 0.85);
+    for (var i = 0; i < 9; i++) {
+      var a = rnd() * U.TAU, sp = rnd.range(20, 90);
+      Pt.spawn(x + Math.cos(a) * 5, y + Math.sin(a) * 5, Math.cos(a) * sp, Math.sin(a) * sp,
+        rnd.range(0.4, 0.9), CFG.DUST[(rnd() * CFG.DUST.length) | 0], (rnd() * rows) | 0, 0.7);
     }
   };
 
   S.pointer = function (x, y, active) {
     env.mouse.x = x; env.mouse.y = y;
-    env.mouse.active = active && !opts.wallpaper;
+    env.mouse.active = active && !opts.wallpaper && !held;
     if (active) windowActive = true;
   };
 
   // ------------------------------------------------------------------ кадр
 
   function step(dt) {
+    if (held) {
+      // взятое существо плавно подтягивается под руку
+      var hk = Math.exp(-5 * dt);
+      offX *= hk; offY *= hk;
+      hold.x = lastX + offX; hold.y = lastY + offY;
+    }
     time += dt; env.time = time;
     var i, j, c;
     for (i = 0; i < list.length; i++) {
@@ -298,7 +390,8 @@
       var need = c.radius / grid.cell + CFG.HALO_CELLS;
       var h = need <= HALO_SIZES[0] ? halos[0] : need <= HALO_SIZES[1] ? halos[1] : halos[2];
       var hx = c.hx == null ? c.x : c.hx, hy = c.hy == null ? c.y : c.hy;
-      ctx.globalAlpha = CFG.GRID_ALPHA_NEAR * vis * (0.6 + 0.4 * c.depth);
+      ctx.globalAlpha = Math.min(1, CFG.GRID_ALPHA_NEAR * opts.grid * vis * (0.6 + 0.4 * c.depth));
+      if (ctx.globalAlpha <= 0.002) continue;
       ctx.drawImage(h.canvas, (Math.round(hx / grid.cell) - h.rc) * cd, (Math.round(hy / grid.cell) - h.rc) * cd);
     }
 
@@ -319,9 +412,9 @@
     if (opts.cell + autoCell < CFG.CELL_MAX) { autoCell++; changed = true; }
     if (particleScale > 0.3) { particleScale *= 0.7; ambientScale *= 0.75; changed = true; }
     if (changed) {
-      Am.level = (reduced ? 0.4 : opts.saver ? 0.6 : 1) * ambientScale;
+      Am.level = ambientLevel();
       rebuildGrid();
-      Pt.cap = Math.round(CFG.PARTICLES_MAX * particleScale * (opts.saver ? 0.5 : 1));
+      Pt.cap = particleCap();
       S.stats.degraded++;
     }
   }
@@ -349,7 +442,7 @@
 
     var t0 = performance.now();
     var dt = Math.min(real, 0.05);
-    if (!opts.paused) step(dt * (reduced ? 0.5 : 1));
+    if (!opts.paused) step(dt * opts.speed * (reduced ? 0.5 : 1));
     else { Db.update(dt); if (bgFade < 1) bgFade = Math.min(1, bgFade + dt / 0.7); }
     render();
     dirty = false;
@@ -398,7 +491,7 @@
     }
     S.set(o || {});
     rebuildGrid();
-    Pt.cap = Math.round(CFG.PARTICLES_MAX * (opts.saver ? 0.5 : 1));
+    Pt.cap = particleCap();
 
     var resizeT = 0;
     window.addEventListener('resize', function () {

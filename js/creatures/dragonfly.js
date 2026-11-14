@@ -59,10 +59,11 @@
     this.t += dt;
     var vx = 0, vy = 0;
 
+    if (this.held) { this.state = 0; this.timer = Math.max(this.timer, 0.4); }
     if (this.state === 0) {
       // зависает с дрожанием; перед броском быстро разворачивается
       this.timer -= dt * (1 + 1.5 * this.excite);
-      if (this.excite > 0.35 && env.mouse.active && this.timer > 0.3) {
+      if (!this.held && this.excite > 0.35 && env.mouse.active && this.timer > 0.3) {
         this.pickDash(env, this.x - env.mouse.x, this.y - env.mouse.y);
         this.timer = 0.25;
       }

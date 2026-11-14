@@ -5,6 +5,7 @@
  *   ?creature=koi       вид существ (в режиме обоев и для ссылок)
  *   ?fps=24             ограничение кадров
  *   ?cell=9  ?count=1.2 размер ячейки и множитель числа существ
+ *   ?speed=0.5          множитель скорости существ
  *   ?palette=URL        адрес palette.json
  *   ?color=natural      режим цвета: auto | natural | adaptive
  *   ?adapt=0            не снижать качество автоматически */
@@ -22,11 +23,21 @@
     paused: false,
     hint: true,
     saver: false,
-    ambient: true,
+    speed: 1,
+    size: 1,
+    react: 1,
+    grid: 1,
+    dust: 1,
+    effects: 1,
+    voice: true,
+    voiceAuto: false,
+    voiceLang: '',
     colorMode: 'auto',
     paletteUrl: CFG.PALETTE_URL,
     searchUrl: CFG.SEARCH_URL
   };
+
+  GP.DEFAULTS = DEFAULTS;
 
   function params() {
     var out = {};
@@ -47,12 +58,19 @@
     s.countScale = U.clamp(+s.countScale || 1, 0.25, 2);
     s.density = U.clamp(isNaN(+s.density) ? CFG.GLYPH_DENSITY : +s.density, 0, 1);
     if (['auto', 'natural', 'adaptive'].indexOf(s.colorMode) < 0) s.colorMode = 'auto';
+    // прежняя версия хранила эффекты среды как переключатель
+    if (s.ambient === false && saved && saved.effects == null) s.effects = 0;
+    delete s.ambient;
+    var num = function (key, lo, hi) { var v = +s[key]; s[key] = U.clamp(isNaN(v) ? DEFAULTS[key] : v, lo, hi); };
+    num('speed', 0.25, 2); num('size', 0.6, 1.6); num('react', 0, 2);
+    num('grid', 0, 2); num('dust', 0, 2); num('effects', 0, 1.5);
 
     // параметры адреса действуют на один сеанс и не сохраняются
     var live = Object.assign({}, s);
     if (q.creature && GP.species[q.creature]) live.species = q.creature;
     if (q.cell) live.cell = U.clamp(Math.round(+q.cell) || s.cell, CFG.CELL_MIN, CFG.CELL_MAX);
     if (q.count) live.countScale = U.clamp(+q.count || 1, 0.25, 2);
+    if (q.speed) live.speed = U.clamp(+q.speed || 1, 0.25, 2);
     if (q.color && ['auto', 'natural', 'adaptive'].indexOf(q.color) >= 0) live.colorMode = q.color;
     if (q.palette) live.paletteUrl = q.palette;
     if (wallpaper) { live.paused = false; }
@@ -62,7 +80,8 @@
     GP.Palette.init(live.colorMode);
     GP.Scene.init(document.getElementById('scene'), {
       cell: live.cell, countScale: live.countScale, density: live.density,
-      paused: live.paused, saver: live.saver, ambient: live.ambient !== false, wallpaper: wallpaper,
+      paused: live.paused, saver: live.saver, wallpaper: wallpaper,
+      speed: live.speed, size: live.size, react: live.react, grid: live.grid, dust: live.dust, effects: live.effects,
       adapt: q.adapt !== '0', fps: U.clamp(+q.fps || 0, 0, 240)
     });
 
@@ -70,7 +89,7 @@
       GP.Palette.onChange = function () { GP.Scene.paletteChanged(); };
     } else {
       // интерфейс работает с сохраняемыми настройками; вид из адреса — только на сеанс
-      var ui = q.creature || q.cell || q.count || q.color || q.palette ? live : s;
+      var ui = q.creature || q.cell || q.count || q.speed || q.color || q.palette ? live : s;
       GP.UI.init(ui);
     }
 

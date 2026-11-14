@@ -76,7 +76,8 @@
       if (this.turnT <= 0) { this.turnT = this.rnd.range(2, 6); this.turn = this.rnd.range(-0.9, 0.9); }
       var st = U.clamp(this.turn, -1.2 * dt, 1.2 * dt);
       this.heading += st; this.turn -= st;
-      if (this.excite > 0.3 && env.mouse.active) this.run(env, this.x - env.mouse.x, this.y - env.mouse.y);
+      if (this.held) { /* ждёт, пока отпустят */ }
+      else if (this.excite > 0.3 && env.mouse.active) this.run(env, this.x - env.mouse.x, this.y - env.mouse.y);
       else if (this.timer <= 0) this.run(env);
     } else {
       this.tau += dt / this.dur;
@@ -90,7 +91,8 @@
           -vx * 0.15, -vy * 0.15, this.rnd.range(0.5, 0.9), this.rnd.pick(['.', ',', "'"]), this.rnd() < 0.5 ? 0 : 1, 0.6);
       }
     }
-    this.moving += ((this.state ? 1 : 0) - this.moving) * Math.min(1, dt * 8);
+    if (this.held) { this.state = 0; this.timer = Math.max(this.timer, 0.4); this.walk += dt * 11; }   // в руке перебирает ногами
+    this.moving += ((this.state || this.held ? 1 : 0) - this.moving) * Math.min(1, dt * 8);
     Cr.move(this, dt, env, vx, vy);
     this.cos = Math.cos(this.heading); this.sin = Math.sin(this.heading);
 

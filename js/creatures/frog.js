@@ -77,6 +77,7 @@
     this.t += dt;
     var vx = 0, vy = 0;
 
+    if (this.held) { this.state = 0; this.timer = Math.max(this.timer, 0.5); }
     if (this.state === 0) {
       this.timer -= dt;
       this.turnT -= dt;
@@ -85,9 +86,11 @@
         this.target = this.heading + this.rnd.range(-0.9, 0.9);
       }
       this.heading = U.turnToward(this.heading, this.target, 5 * dt);
-      if (this.excite > 0.35 && env.mouse.active) this.plan(env, this.x - env.mouse.x, this.y - env.mouse.y);
+      if (this.held) { /* ждёт, пока отпустят */ }
+      else if (this.excite > 0.35 && env.mouse.active) this.plan(env, this.x - env.mouse.x, this.y - env.mouse.y);
       else if (this.timer <= 0) this.plan(env);
-      this.ext += (0 - this.ext) * Math.min(1, dt * 10);
+      // в руке лапы свисают
+      this.ext += ((this.held ? 0.8 : 0) - this.ext) * Math.min(1, dt * 10);
       this.height = 0;
     } else if (this.state === 1) {
       this.timer -= dt;

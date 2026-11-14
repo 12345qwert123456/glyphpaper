@@ -52,7 +52,10 @@
 
   // ------------------------------------------------------------- приветствие
 
+  var status = '', statusT = 0;
+
   function greeting() {
+    if (status) { $('greeting').textContent = status; return; }
     var h = new Date().getHours();
     var name = (settings.name || '').trim();
     var text;
@@ -62,6 +65,14 @@
     else text = 'Still up';
     var night = text === 'Still up';
     $('greeting').textContent = text + (name ? ', ' + name : '') + (night ? '?' : '');
+  }
+
+  /** Временно показывает строку вместо приветствия (ms = 0 — пока не снимут). */
+  function say(text, ms) {
+    clearTimeout(statusT);
+    status = text || '';
+    greeting();
+    if (status && ms) statusT = setTimeout(function () { status = ''; greeting(); }, ms);
   }
 
   // ------------------------------------------------------------------ поиск
@@ -102,7 +113,68 @@
     byTemplate(text);
   }
 
+  // ---------------------------------------------------------- голосовой ввод
+
+  var VOICE_ERRORS = {
+    'not-allowed': 'Microphone access is blocked',
+    'service-not-allowed': 'Microphone access is blocked',
+    'audio-capture': 'No microphone found',
+    'network': 'Voice service is unavailable',
+    'unavailable': 'Voice input is unavailable'
+  };
+  var heard = '';
+
+  function voiceUi() {
+    var V = GP.Voice, on = V.supported && settings.voice;
+    $('orb').hidden = !on;
+    $('mic').hidden = !on;
+    GP.Orb.show(on);
+    $('set-voice').disabled = !V.supported;
+    $('voice-note').textContent = V.supported ? '' : 'not supported in this browser';
+    $('row-voice-auto').hidden = !on;
+    $('row-voice-lang').hidden = !on;
+    V.lang = (settings.voiceLang || '').trim();
+    if (!on && V.listening) V.stop();
+    zone();
+  }
+
+  function bindVoice() {
+    var V = GP.Voice;
+    GP.Orb.init($('orb-canvas'));
+    $('orb').addEventListener('click', function () { V.toggle(); });
+    $('mic').addEventListener('click', function () { V.toggle(); });
+    V.onText = function (text, fin) {
+      $('q').value = text;
+      if (fin) heard = text;
+    };
+    V.onState = function (state, detail) {
+      $('mic').setAttribute('aria-pressed', state === 'listening' ? 'true' : 'false');
+      if (state === 'listening') { heard = ''; say('Listening…', 0); return; }
+      if (state === 'error') { say(VOICE_ERRORS[detail] || 'Voice input failed', 3000); return; }
+      // idle: распознавание закончилось
+      if (status === 'Listening…') say('', 0);
+      if (heard) {
+        if (settings.voiceAuto) search(heard); else $('q').focus();
+        heard = '';
+      }
+    };
+    voiceUi();
+  }
+
   // -------------------------------------------------------------- настройки
+
+  // ползунки: id элемента, ключ настройки (он же параметр сцены), множитель и подпись
+  var SLIDERS = [
+    { id: 'count', key: 'countScale', k: 100, text: function () { return Scene.count(); } },
+    { id: 'speed', key: 'speed', k: 100 },
+    { id: 'size', key: 'size', k: 100 },
+    { id: 'react', key: 'react', k: 100, off: true },
+    { id: 'cell', key: 'cell', k: 1, text: function (v) { return v + ' px'; } },
+    { id: 'density', key: 'density', k: 100 },
+    { id: 'grid', key: 'grid', k: 100, off: true },
+    { id: 'dust', key: 'dust', k: 100, off: true },
+    { id: 'effects', key: 'effects', k: 100, off: true }
+  ];
 
   function openSettings(open) {
     $('settings').hidden = !open;
@@ -120,46 +192,54 @@
   }
 
   function syncOutputs() {
-    $('out-count').textContent = Scene.count();
-    $('out-cell').textContent = settings.cell + ' px';
-    $('out-density').textContent = Math.round(settings.density * 100) + '%';
+    SLIDERS.forEach(function (sl) {
+      var v = Math.round(settings[sl.key] * sl.k);
+      $('out-' + sl.id).textContent = sl.text ? sl.text(v) : (sl.off && v === 0 ? 'off' : v + '%');
+    });
   }
 
   function bindSettings() {
     $('set-name').value = settings.name;
-    $('set-count').value = Math.round(settings.countScale * 100);
-    $('set-cell').value = settings.cell;
-    $('set-density').value = Math.round(settings.density * 100);
     $('set-palette').value = settings.paletteUrl;
     $('set-search').value = settings.searchUrl;
-    $('set-paused').checked = settings.paused;
-    $('set-ambient').checked = settings.ambient;
-    $('set-hint').checked = settings.hint;
-    $('set-saver').checked = settings.saver;
+    $('set-voiceLang').value = settings.voiceLang;
     $('row-search').hidden = Storage.extension;   // в расширении поиск идёт через браузер
     $('hint').hidden = !settings.hint;
     markColor();
-    syncOutputs();
 
     $('settings-btn').addEventListener('click', function () { openSettings($('settings').hidden); });
 
+    SLIDERS.forEach(function (sl) {
+      var el = $('set-' + sl.id);
+      el.value = Math.round(settings[sl.key] * sl.k);
+      el.addEventListener('input', function () {
+        settings[sl.key] = +this.value / sl.k;
+        var o = {}; o[sl.key] = settings[sl.key];
+        Scene.set(o);
+        syncOutputs(); save();
+      });
+    });
+    syncOutputs();
+
+    // переключатели: ключ настройки и что сделать при смене
+    [
+      ['paused', function (v) { Scene.set({ paused: v }); }],
+      ['hint', function (v) { $('hint').hidden = !v; }],
+      ['saver', function (v) { Scene.set({ saver: v }); }],
+      ['voice', voiceUi],
+      ['voiceAuto', null]
+    ].forEach(function (t) {
+      var el = $('set-' + t[0]);
+      el.checked = !!settings[t[0]];
+      el.addEventListener('change', function () {
+        settings[t[0]] = this.checked;
+        if (t[1]) t[1](this.checked);
+        save();
+      });
+    });
+
     $('set-name').addEventListener('input', function () {
       settings.name = this.value; greeting(); save();
-    });
-    $('set-count').addEventListener('input', function () {
-      settings.countScale = this.value / 100;
-      Scene.set({ countScale: settings.countScale });
-      syncOutputs(); save();
-    });
-    $('set-cell').addEventListener('input', function () {
-      settings.cell = +this.value;
-      Scene.set({ cell: settings.cell });
-      syncOutputs(); save();
-    });
-    $('set-density').addEventListener('input', function () {
-      settings.density = this.value / 100;
-      Scene.set({ density: settings.density });
-      syncOutputs(); save();
     });
     $('set-color').addEventListener('click', function (e) {
       var b = e.target.closest('button');
@@ -180,17 +260,15 @@
       this.value = settings.searchUrl;
       save();
     });
-    $('set-ambient').addEventListener('change', function () {
-      settings.ambient = this.checked; Scene.set({ ambient: settings.ambient }); save();
+    $('set-voiceLang').addEventListener('change', function () {
+      settings.voiceLang = this.value.trim();
+      voiceUi(); save();
     });
-    $('set-paused').addEventListener('change', function () {
-      settings.paused = this.checked; Scene.set({ paused: settings.paused }); save();
-    });
-    $('set-hint').addEventListener('change', function () {
-      settings.hint = this.checked; $('hint').hidden = !settings.hint; save();
-    });
-    $('set-saver').addEventListener('change', function () {
-      settings.saver = this.checked; Scene.set({ saver: settings.saver }); save();
+    // сброс: всё к значениям по умолчанию, кроме имени и выбранного вида
+    $('set-reset').addEventListener('click', function () {
+      var keep = { name: settings.name, species: settings.species };
+      Storage.save(Object.assign({}, GP.DEFAULTS, keep));
+      location.reload();
     });
   }
 
@@ -203,20 +281,42 @@
   }
 
   function bindInput() {
-    var canvas = $('scene');
+    var canvas = $('scene'), dragging = false;
     window.addEventListener('pointermove', function (e) {
       if (e.pointerType === 'touch') return;
       Scene.pointer(e.clientX, e.clientY, true);
     }, { passive: true });
     document.documentElement.addEventListener('pointerleave', function () { Scene.pointer(0, 0, false); });
 
-    // клик по фону: существа разлетаются
+    // зажать существо — взять «в руку» и перетащить; по пустому месту — круг на воде
     canvas.addEventListener('pointerdown', function (e) {
       if (e.button) return;
       if (!$('settings').hidden) { openSettings(false); return; }
       if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
-      Scene.scatter(e.clientX, e.clientY);
+      if (Scene.grab(e.clientX, e.clientY)) {
+        dragging = true;
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* указатель уже отпущен */ }
+        canvas.style.cursor = 'grabbing';
+        e.preventDefault();
+      } else {
+        Scene.tap(e.clientX, e.clientY);
+      }
     });
+    canvas.addEventListener('pointermove', function (e) {
+      if (dragging) { Scene.drag(e.clientX, e.clientY); return; }
+      if (e.pointerType === 'mouse') canvas.style.cursor = Scene.pick(e.clientX, e.clientY) ? 'grab' : '';
+    });
+    function drop() {
+      if (!dragging) return;
+      dragging = false;
+      Scene.release();
+      canvas.style.cursor = '';
+    }
+    canvas.addEventListener('pointerup', drop);
+    canvas.addEventListener('pointercancel', drop);
+    canvas.addEventListener('lostpointercapture', drop);
+    window.addEventListener('blur', drop);
+
     document.addEventListener('pointerdown', function (e) {
       if (!$('settings').hidden && !e.target.closest('#settings, #settings-btn')) openSettings(false);
     });
@@ -256,6 +356,7 @@
     setInterval(greeting, 30000);
     bindSettings();
     bindInput();
+    bindVoice();
     zone();
     Pal.onChange = function () { Scene.paletteChanged(); markColor(); };
   };

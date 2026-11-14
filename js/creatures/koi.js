@@ -188,6 +188,17 @@
     }
   };
 
+  /** Рыбу можно ухватить за любое место тела. */
+  Koi.prototype.hit = function (x, y) {
+    var best = 9;
+    for (var i = 0; i < NODES; i++) {
+      var dx = x - this.dx[i], dy = y - this.dy[i];
+      var q = Math.sqrt(dx * dx + dy * dy) / (this.r[i] + this.cell * 1.5);
+      if (q < best) best = q;
+    }
+    return best;
+  };
+
   Koi.prototype.bounds = function (b) {
     var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (var i = 0; i < NODES; i++) {

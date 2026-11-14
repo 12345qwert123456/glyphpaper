@@ -7,13 +7,13 @@
 
   // ------------------------------------------------------------- пыль
 
-  var MAX = CFG.PARTICLES_MAX;
+  var MAX = CFG.PARTICLES_MAX * 2;        // запас под настройку «пыль» выше 100%
   var px = new Float32Array(MAX), py = new Float32Array(MAX);
   var vx = new Float32Array(MAX), vy = new Float32Array(MAX);
   var life = new Float32Array(MAX), span = new Float32Array(MAX), alp = new Float32Array(MAX);
   var glyph = new Uint8Array(MAX), shade = new Uint8Array(MAX);
 
-  var P = GP.Particles = { n: 0, cap: MAX };
+  var P = GP.Particles = { n: 0, cap: CFG.PARTICLES_MAX, max: MAX };
 
   /** glyphChar — символ из CFG.DUST, shadeRow — строка цветного атласа. */
   P.spawn = function (x, y, velX, velY, lifeSec, glyphChar, shadeRow, alpha) {

@@ -46,14 +46,23 @@
   /** Интегрирует положение: собственная скорость + затухающий толчок. */
   Cr.move = function (c, dt, env, vx, vy) {
     var m = env.mouse, dx, dy, d, f;
-    if (m.active) {
+    if (c.held) {
+      // существо «в руке»: тянется за указателем, своё движение не действует
+      f = Math.min(1, dt * CFG.GRAB_FOLLOW);
+      dx = (c.held.x - c.x) * f; dy = (c.held.y - c.y) * f;
+      c.x += dx; c.y += dy;
+      c.pushX = c.pushY = 0;
+      c.excite = 0.85;
+      return;
+    }
+    if (m.active && env.react > 0) {
       dx = c.x - m.x; dy = c.y - m.y;
       d = Math.sqrt(dx * dx + dy * dy);
       if (d < CFG.CURSOR_RADIUS) {
         f = 1 - d / CFG.CURSOR_RADIUS; f *= f;
         if (d < 1) { dx = 1; dy = 0; d = 1; }
-        c.pushX += dx / d * CFG.CURSOR_FORCE * f * dt;
-        c.pushY += dy / d * CFG.CURSOR_FORCE * f * dt;
+        c.pushX += dx / d * CFG.CURSOR_FORCE * env.react * f * dt;
+        c.pushY += dy / d * CFG.CURSOR_FORCE * env.react * f * dt;
         if (f > c.excite) c.excite = f;
       }
     }
@@ -87,14 +96,11 @@
     }
   };
 
-  /** Толчок от клика. */
-  Cr.impulse = function (c, x, y, strength) {
-    var dx = c.x - x, dy = c.y - y;
-    var d = Math.sqrt(dx * dx + dy * dy) || 1;
-    var f = strength / (1 + d / 260);
-    c.pushX += dx / d * f; c.pushY += dy / d * f;
-    c.excite = 1;
-    if (c.onScare) c.onScare(dx / d, dy / d);
+  /** Насколько точка близко к существу: < 1 — можно ухватить. */
+  Cr.hit = function (c, x, y) {
+    if (c.hit) return c.hit(x, y);
+    var dx = x - (c.hx == null ? c.x : c.hx), dy = y - (c.hy == null ? c.y : c.hy);
+    return Math.sqrt(dx * dx + dy * dy) / Math.max(CFG.GRAB_MIN_RADIUS, c.radius * 0.7);
   };
 
   /** Направление от точки внутрь экрана, если существо у края (для прыгающих и бегающих). */

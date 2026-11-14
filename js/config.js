@@ -39,7 +39,9 @@
     SIZE_VARIATION: 0.4,   // размер ±40%
     CURSOR_RADIUS: 140,
     CURSOR_FORCE: 260,     // px/s² у самого курсора
-    CLICK_IMPULSE: 230,    // px/s
+    GRAB_FOLLOW: 14,       // 1/с — как плотно существо следует за рукой
+    GRAB_MIN_RADIUS: 22,   // px — мелких существ тоже можно ухватить
+    THROW_MAX: 420,        // px/с — предел скорости броска при отпускании
     PUSH_DAMPING: 1.6,     // 1/s: возврат к норме за 2–3 с
     SEPARATION: 46,        // px/s² при полном перекрытии
     CENTER_AVOID: 34,      // px/s² выталкивание из зоны интерфейса

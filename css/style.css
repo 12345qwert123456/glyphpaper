@@ -23,6 +23,7 @@ html, body {
 }
 
 #scene {
+  touch-action: none;
   position: fixed;
   inset: 0;
   display: block;
@@ -107,7 +108,7 @@ button:disabled { cursor: default; }
   overflow-y: auto;
   padding: 16px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   border-radius: 16px;
   background: rgba(var(--ui-surface), 0.93);
   border: 1px solid rgba(var(--ui-text), 0.08);
@@ -115,6 +116,27 @@ button:disabled { cursor: default; }
   z-index: 4;
 }
 .panel[hidden] { display: none; }
+.panel h2 {
+  margin: 6px 0 -4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--ui-text), 0.38);
+}
+.panel h2:first-child { margin-top: 0; }
+.panel [hidden] { display: none; }
+.reset {
+  height: 32px;
+  margin-top: 4px;
+  border-radius: 9px;
+  border: 1px solid rgba(var(--ui-text), 0.1);
+  background: rgba(var(--ui-text), 0.05);
+  color: rgba(var(--ui-text), 0.75);
+  font-size: 12.5px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.reset:hover { background: rgba(var(--ui-text), 0.1); color: rgb(var(--ui-text)); }
 
 .field { display: grid; gap: 7px; }
 .field > span { display: flex; justify-content: space-between; align-items: baseline; color: rgba(var(--ui-text), 0.6); }
@@ -182,18 +204,24 @@ button:disabled { cursor: default; }
 }
 #center > * { pointer-events: auto; }
 
-.moon {
-  width: 44px;
-  height: 44px;
+.orb {
+  width: 64px;
+  height: 64px;
+  margin: -10px 0;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 38% 24%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 46%),
-    linear-gradient(180deg, #cfd3da 0%, #8a8f99 52%, #3a3e47 100%);
-  pointer-events: none !important;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  transition: transform 160ms ease;
 }
+.orb[hidden] { display: none; }
+.orb:hover { transform: scale(1.06); }
+.orb canvas { display: block; pointer-events: none; }
 
 #greeting {
-  margin: 16px 0 22px;
+  margin: 14px 0 22px;
   font-size: 20px;
   font-weight: 300;
   letter-spacing: 0.005em;
@@ -209,27 +237,23 @@ button:disabled { cursor: default; }
 
 .search {
   width: 100%;
-  min-height: 80px;
-  padding: 9px 10px 8px 14px;
+  min-height: 56px;
+  padding: 0 10px 0 16px;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
   border-radius: 16px;
   background: rgba(var(--ui-surface), 0.8);
   border: 1px solid rgba(var(--ui-text), 0.08);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 .search:focus-within { border-color: rgba(var(--ui-text), 0.2); background: rgba(var(--ui-surface), 0.9); }
-
-.search .row { display: flex; align-items: center; gap: 10px; }
 .search .lens { flex: none; color: rgba(var(--ui-text), 0.5); }
-.search .grow { flex: 1; }
 
 #q {
   flex: 1;
   min-width: 0;
-  height: 30px;
+  height: 54px;
   padding: 0;
   border: 0;
   outline: none;
@@ -239,36 +263,27 @@ button:disabled { cursor: default; }
 }
 #q::placeholder { color: rgba(var(--ui-text), 0.45); }
 
-.search .tools { gap: 6px; margin-left: -4px; }
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 11px 0 9px;
-  border-radius: 13px;
-  border: 1px solid rgba(var(--ui-text), 0.1);
-  background: transparent;
-  color: rgba(var(--ui-text), 0.55);
-  font-size: 12px;
-}
-
 .search .icon {
-  width: 30px;
-  height: 30px;
+  flex: none;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: rgba(var(--ui-text), 0.5);
+  color: rgba(var(--ui-text), 0.55);
+  transition: background-color 120ms ease, color 120ms ease;
 }
+.search .icon[hidden] { display: none; }
+.search .icon:hover { background: rgba(var(--ui-text), 0.08); color: rgb(var(--ui-text)); }
+.search .icon[aria-pressed="true"] { background: rgba(var(--ui-text), 0.16); color: rgb(var(--ui-text)); }
 
 .send {
-  width: 30px;
-  height: 30px;
+  flex: none;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -302,7 +317,7 @@ button:disabled { cursor: default; }
   .pill { left: 16px; right: 60px; transform: none; max-width: none; }
 }
 @media (max-height: 420px) {
-  .moon { display: none; }
+  .orb { display: none; }
   #center { top: 58%; }
 }
 
