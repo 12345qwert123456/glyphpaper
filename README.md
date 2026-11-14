@@ -110,7 +110,7 @@ js/ui.js                переключатель, приветствие, по
 js/main.js              точка входа и параметры адреса
 tools/palette-server.py сервер палитры для 127.0.0.1
 tools/make_icons.py     генератор иконок расширения
-noctalia/               шаблон палитры и пример сервиса systemd
+noctalia/               шаблон палитры, пример регистрации и сервис systemd
 ```
 
 Скрипты подключены обычными тегами `<script>`, ES-модулей нет — страница работает с `file://`.
@@ -195,14 +195,39 @@ exec-once = python3 ~/src/glyph-pond/tools/palette-server.py
 
 ### Шаблон Noctalia
 
-`noctalia/palette.json.template` рендерит `palette.json` из ролей палитры.
-`noctalia/user-templates.example.toml` показывает, как зарегистрировать его в
-`~/.config/noctalia/user-templates.toml`.
+`noctalia/palette.json.template` рендерит `palette.json` из ролей палитры
+(`{{colors.<роль>.default.hex}}` — этот синтаксис одинаков в v4 и v5).
 
-**Не проверено на живой установке.** Синтаксис шаблонов зависит от версии Noctalia
-(`[templates.<имя>]` в одних версиях, `[theme.templates.user.<имя>]` в v5). Сверьтесь с
-документацией своей версии и выводом `noctalia theme --list-templates`. Без шаблона всё
-работает от `~/.cache/wal/colors.json`, если Noctalia его пишет.
+```bash
+mkdir -p ~/.config/noctalia/templates
+```
+
+```bash
+cp noctalia/palette.json.template ~/.config/noctalia/templates/glyph-pond-palette.json
+```
+
+Регистрация шаблона зависит от версии — оба варианта лежат в `noctalia/templates.example.toml`:
+
+| Версия | Куда добавить | Блок |
+| --- | --- | --- |
+| Noctalia v5 | основной конфиг Noctalia | `[theme.templates.user.glyph-pond]` |
+| Noctalia Shell (legacy, v4) | `~/.config/noctalia/user-templates.toml`, включается в Settings → Color Scheme → Templates → Advanced | `[templates.glyph-pond]` |
+
+Проверить, что шаблон подхвачен:
+
+```bash
+noctalia theme --list-templates
+```
+
+Синтаксис сверен с документацией Noctalia
+([v5: шаблоны](https://docs.noctalia.dev/noctalia/theming/templates/),
+[v5: User Templates](https://docs.noctalia.dev/noctalia/theming/app-theming/),
+[legacy](https://docs.noctalia.dev/noctalia-shell-legacy/theming/user-templates/)),
+но на живой установке Noctalia шаблон не запускался.
+
+Поля `mode` в шаблоне нет намеренно: страница определяет светлую или тёмную тему по светлоте
+`surface`. Запасной источник `~/.cache/wal/colors.json` работает, только если такой файл у вас
+кто-то пишет (в v5 это делает, например, шаблон сообщества `pywalfox`).
 
 ## Режим обоев
 

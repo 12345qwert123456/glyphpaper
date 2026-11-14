@@ -1,0 +1,26 @@
+# Glyph Pond: палитра Noctalia → $XDG_CACHE_HOME/glyph-pond/palette.json
+#
+# Сначала скопируйте шаблон:
+#   mkdir -p ~/.config/noctalia/templates
+#   cp noctalia/palette.json.template ~/.config/noctalia/templates/glyph-pond-palette.json
+#
+# Затем добавьте ОДИН из блоков ниже — какой, зависит от версии Noctalia.
+# Проверить, что шаблон подхвачен:  noctalia theme --list-templates
+#
+# post_hook не нужен: сервер палитры читает файл при каждом запросе.
+
+# --- Noctalia v5: блок в основном конфиге Noctalia -------------------------
+# https://docs.noctalia.dev/noctalia/theming/app-theming/  (раздел User Templates)
+[theme.templates.user.glyph-pond]
+input_path  = "$XDG_CONFIG_HOME/noctalia/templates/glyph-pond-palette.json"
+output_path = "$XDG_CACHE_HOME/glyph-pond/palette.json"
+
+# --- Noctalia Shell (legacy, v4): файл ~/.config/noctalia/user-templates.toml
+# Включается в Settings → Color Scheme → Templates → Advanced → User templates.
+# https://docs.noctalia.dev/noctalia-shell-legacy/theming/user-templates/
+#
+# [config]
+#
+# [templates.glyph-pond]
+# input_path  = "~/.config/noctalia/templates/glyph-pond-palette.json"
+# output_path = "~/.cache/glyph-pond/palette.json"
