@@ -37,14 +37,14 @@
     // пруд сверху: блики, волны, круги, пузырьки
     pond: {
       medium: 'water', specks: { d: 0.010, glyphs: ".,:", a: [0.04, 0.10] },
-      field: { type: 'caustic', thr: 0.76, a: 0.055, k: 0.030 },
+      field: { type: 'caustic', thr: 0.42, a: 0.06, k: 0.030 },
       current: 5, arcs: { n: 10, len: [7, 18], speed: [6, 14] },
       bubbles: { rate: 1.3 }, rings: { every: [1.4, 3.5] }, motes: { n: 12, glyphs: ".,", a: 0.2, fall: 0 }
     },
     // пруд с листьями кувшинок
     lily: {
       medium: 'water', specks: { d: 0.014, glyphs: ".,\"o", a: [0.04, 0.10] }, pads: { n: 11, r: [2, 4.2], a: 0.06 },
-      field: { type: 'caustic', thr: 0.78, a: 0.05, k: 0.028 },
+      field: { type: 'caustic', thr: 0.46, a: 0.055, k: 0.028 },
       current: 4, arcs: { n: 5, len: [6, 14], speed: [6, 14] },
       bubbles: { rate: 0.5 }, rings: { every: [2, 5] }, motes: { n: 8, glyphs: ".,", a: 0.15, fall: 0 }
     },
@@ -58,7 +58,7 @@
     // берег: песок, камешки, длинные волны прибоя
     shore: {
       medium: 'water', specks: { d: 0.035, glyphs: ".,:;.", a: [0.05, 0.13] }, pads: { n: 14, r: [0.9, 1.8], a: 0.05 },
-      field: { type: 'caustic', thr: 0.78, a: 0.05, k: 0.022 },
+      field: { type: 'caustic', thr: 0.46, a: 0.055, k: 0.022 },
       current: 4, arcs: { n: 6, len: [16, 34], speed: [10, 20], same: true },
       bubbles: { rate: 0.4 }, motes: { n: 6, glyphs: ".", a: 0.14, fall: 0 }
     }
@@ -327,13 +327,13 @@
           var X = i * cell - Math.cos(dirBase) * drift, Y = j * cell;
           v = 0.62 * U.noise2(X * f.k, Y * f.k * 1.7, seed) + 0.38 * U.noise2(X * f.k * 2.6, Y * f.k * 3.6, seed + 8);
         } else if (f.type === 'caustic') {
-          // блики на воде: три волны под разными углами складываются в подвижную сетку пятен
-          var wx = i + 2.2 * U.noise2(i * 0.11, j * 0.11 + t * 0.04, seed + 12);
-          var wy = j + 2.2 * U.noise2(i * 0.11 + 40, j * 0.11 - t * 0.04, seed + 14);
-          var kk = k * 2.2, ph = bandPhase * 2.2;
-          v = (Math.sin(wx * kk + ph) + Math.sin((wx * 0.5 + wy * 0.866) * kk - ph * 0.8) +
-            Math.sin((wx * 0.5 - wy * 0.866) * kk + ph * 0.6)) / 3;
-          v = 0.5 + 0.5 * v;
+          // блики на воде: тонкая неровная сеть там, где два медленно плывущих шума
+          // проходят через середину — она течёт и перестраивается
+          var kc = f.k * 3;
+          var n = 0.5 * (U.noise2(i * kc + t * 0.06, j * kc, seed + 12) +
+            U.noise2(i * kc - t * 0.045 + 31, j * kc + t * 0.035 + 17, seed + 14));
+          v = 1 - Math.abs(2 * n - 1) * 4;
+          if (v > 0) v *= 0.35 + 0.65 * U.noise2(i * 0.04 + t * 0.012, j * 0.04, seed + 13);
         } else {
           // полосы идут по ветру (течению), шум ломает их в отдельные гребни
           var warp = U.noise2(i * 0.07, j * 0.07 + t * 0.03, seed + 12);
