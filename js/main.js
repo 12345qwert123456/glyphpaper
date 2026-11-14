@@ -94,6 +94,7 @@
     }
 
     GP.Scene.setSpecies(live.species);
+    if (!wallpaper) GP.UI.sync();          // число существ известно только после появления вида
     GP.Scene.start();
 
     if (live.colorMode !== 'natural' && (!wallpaper || q.palette)) GP.Palette.startPolling(live.paletteUrl);

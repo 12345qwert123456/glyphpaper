@@ -348,6 +348,8 @@
     window.addEventListener('resize', function () { setTimeout(zone, 0); });
   }
 
+  UI.sync = function () { if (settings) syncOutputs(); };
+
   UI.init = function (s) {
     settings = s;
     buildSwitcher();
