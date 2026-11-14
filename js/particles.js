@@ -29,7 +29,8 @@
 
   P.clear = function () { P.n = 0; };
 
-  P.update = function (dt) {
+  P.update = function (dt, flowX, flowY) {
+    flowX = flowX || 0; flowY = flowY || 0;
     var drag = Math.exp(-1.3 * dt);
     for (var i = 0; i < P.n; i++) {
       life[i] -= dt;
@@ -42,7 +43,7 @@
         continue;
       }
       vx[i] *= drag; vy[i] *= drag;
-      px[i] += vx[i] * dt; py[i] += vy[i] * dt;
+      px[i] += (vx[i] + flowX) * dt; py[i] += (vy[i] + flowY) * dt;
     }
     if (P.n > P.cap) P.n = P.cap;
   };

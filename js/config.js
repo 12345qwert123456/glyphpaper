@@ -22,7 +22,7 @@
     // --- глифы ---
     RAMP: '.:-=+*#%@',    // рампа плотности, от редкого к плотному
     STROKES: '-/|\\',     // штрихи по направлению (0°, 45°, 90°, 135°)
-    DUST: ".,':/*+o-",    // символы «пыли»
+    DUST: ".,':/*+o-~O",  // символы «пыли» и среды (волны, пузырьки)
     FONT_MONO: '"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace',
     GLYPH_SCALE: 0.92,    // размер символа относительно ячейки
     GLYPH_DENSITY: 0.85,  // доля ячеек с символом (настройка «плотность символов»)
@@ -38,8 +38,8 @@
     REF_AREA: 1920 * 1080, // стартовые количества заданы для 1080p
     SIZE_VARIATION: 0.4,   // размер ±40%
     CURSOR_RADIUS: 140,
-    CURSOR_FORCE: 900,     // px/s² у самого курсора
-    CLICK_IMPULSE: 620,    // px/s
+    CURSOR_FORCE: 260,     // px/s² у самого курсора
+    CLICK_IMPULSE: 230,    // px/s
     PUSH_DAMPING: 1.6,     // 1/s: возврат к норме за 2–3 с
     SEPARATION: 46,        // px/s² при полном перекрытии
     CENTER_AVOID: 34,      // px/s² выталкивание из зоны интерфейса

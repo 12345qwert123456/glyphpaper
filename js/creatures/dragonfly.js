@@ -4,11 +4,14 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 10;
+  var ENV = 'reeds';       // среда вида (см. js/ambient.js)
+  var DRIFT = 0.25;         // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#4fe0a8',
     materials: [
       { role: 'secondary', stops: ['#0f5a3f', '#1f9d6b', '#4fe0a8', '#c9ffe8'] }, // тело
-      { role: 'secondary', stops: ['#1c6f58', '#58d8ae', '#c9ffe8'] }             // крылья
+      { role: 'secondary', stops: ['#1c6f58', '#58d8ae', '#c9ffe8'] },             // крылья
+      { role: 'on_surface_variant', stops: ['#1f4a48', '#4f9a8f', '#b4e6da'] }   // среда: камыши над водой
     ]
   };
   var UNIT = 1.0;                       // масштаб тела в ячейках
@@ -58,7 +61,7 @@
 
     if (this.state === 0) {
       // зависает с дрожанием; перед броском быстро разворачивается
-      this.timer -= dt * (1 + 2.5 * this.excite);
+      this.timer -= dt * (1 + 1.5 * this.excite);
       if (this.excite > 0.35 && env.mouse.active && this.timer > 0.3) {
         this.pickDash(env, this.x - env.mouse.x, this.y - env.mouse.y);
         this.timer = 0.25;
@@ -151,7 +154,7 @@
   };
 
   var SPECIES = GP.species.dragonfly = {
-    id: 'dragonfly', label: 'Dragonfly', count: COUNT, palette: PALETTE,
+    id: 'dragonfly', env: ENV, drift: DRIFT, label: 'Dragonfly', count: COUNT, palette: PALETTE,
     create: function (env, rnd, x, y) { return new Dragonfly(env, rnd, x, y); }
   };
 })(window.GP);

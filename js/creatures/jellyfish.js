@@ -4,11 +4,14 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 10;
+  var ENV = 'deep';        // среда вида (см. js/ambient.js)
+  var DRIFT = 0.6;          // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#e56fcf',
     materials: [
       { role: 'tertiary', stops: ['#5c1d5a', '#c13fa0', '#e56fcf', '#ffc2f1'] }, // купол
-      { role: 'tertiary', stops: ['#742877', '#c13fa0', '#f0a6e2'] }             // щупальца
+      { role: 'tertiary', stops: ['#742877', '#c13fa0', '#f0a6e2'] },             // щупальца
+      { role: 'secondary', stops: ['#2a2f66', '#5560b8', '#a8b0f0'] }   // среда: толща воды
     ]
   };
   var DOME_CELLS = 4.0;                 // радиус купола, ячеек (при размере 1)
@@ -154,7 +157,7 @@
   };
 
   var SPECIES = GP.species.jellyfish = {
-    id: 'jellyfish', label: 'Jellyfish', count: COUNT, palette: PALETTE,
+    id: 'jellyfish', env: ENV, drift: DRIFT, label: 'Jellyfish', count: COUNT, palette: PALETTE,
     create: function (env, rnd, x, y) { return new Jelly(env, rnd, x, y); }
   };
 })(window.GP);

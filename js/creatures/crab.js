@@ -5,11 +5,14 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 9;
+  var ENV = 'shore';       // среда вида (см. js/ambient.js)
+  var DRIFT = 0;            // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#ff6b3d',
     materials: [
       { role: 'crab', stops: ['#6e1a10', '#c8321e', '#ff6b3d', '#ffc09a'] },  // панцирь и клешни
-      { role: 'crab', stops: ['#6e1a10', '#c8321e', '#ee5f39'] }              // ноги
+      { role: 'crab', stops: ['#6e1a10', '#c8321e', '#ee5f39'] },              // ноги
+      { role: 'on_surface_variant', stops: ['#5a4630', '#a88a5a', '#e6d3a8'] }   // среда: песчаный берег
     ]
   };
   var UNIT = 1.0;                       // масштаб в ячейках; ширина с ногами ≈ 9.5 единиц
@@ -59,7 +62,7 @@
     this.peak = this.rnd.range(RUN_SPEED[0], RUN_SPEED[1]) * this.speedMul;
   };
 
-  Crab.prototype.onScare = function (dx, dy) { this.run(this.env, dx, dy); this.peak *= 1.3; };
+  Crab.prototype.onScare = function (dx, dy) { this.run(this.env, dx, dy); this.peak *= 1.1; };
 
   Crab.prototype.update = function (dt, env) {
     if (env.cell !== this.cell) this.geom(env);
@@ -169,7 +172,7 @@
   };
 
   var SPECIES = GP.species.crab = {
-    id: 'crab', label: 'Crab', count: COUNT, palette: PALETTE, hueJitter: 0.4,
+    id: 'crab', env: ENV, drift: DRIFT, label: 'Crab', count: COUNT, palette: PALETTE, hueJitter: 0.4,
     create: function (env, rnd, x, y) { return new Crab(env, rnd, x, y); }
   };
 })(window.GP);

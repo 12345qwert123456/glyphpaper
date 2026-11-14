@@ -5,11 +5,14 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 7;
+  var ENV = 'sky';         // среда вида (см. js/ambient.js)
+  var DRIFT = 0.2;          // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#c9ced6',
     materials: [
       { role: 'on_surface', stops: ['#565d69', '#aab2bd', '#dfe4ea', '#f2f4f6'] },      // перо
-      { role: 'on_surface_variant', stops: ['#1f232c', '#3b4250', '#6b7380'] }          // тёмные кончики крыльев, клюв, ноги
+      { role: 'on_surface_variant', stops: ['#1f232c', '#3b4250', '#6b7380'] },          // тёмные кончики крыльев, клюв, ноги
+      { role: 'secondary', stops: ['#39414f', '#7f8a9c', '#d5dbe4'] }   // среда: ночное небо
     ]
   };
   var UNIT = 0.86;                      // масштаб в ячейках; размах ≈ 15 единиц
@@ -157,7 +160,7 @@
   };
 
   var SPECIES = GP.species.crane = {
-    id: 'crane', label: 'Crane', count: COUNT, palette: PALETTE,
+    id: 'crane', env: ENV, drift: DRIFT, label: 'Crane', count: COUNT, palette: PALETTE,
     hueJitter: 0.3, flicker: 0.16, separation: 0.45,
     create: function (env, rnd, x, y) { return new Crane(env, rnd, x, y); },
     /** Часть птиц собирается в клин. */

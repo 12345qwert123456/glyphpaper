@@ -191,6 +191,8 @@
   };
 
   P.bg = function () { return cur.bg; };
+  /** Цвет среды вида — последний материал палитры: [тёмный, средний, светлый]. */
+  P.ambient = function (id) { var m = cur.species[id].mats; return m[m.length - 1]; };
   P.dot = function (id) { return cur.species[id].dot; };
 
   /** Готовые рампы особи: для каждого материала SHADES строк CSS и признак

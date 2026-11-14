@@ -5,11 +5,14 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 8;
+  var ENV = 'lily';        // среда вида (см. js/ambient.js)
+  var DRIFT = 0;            // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#6fd36a',
     materials: [
       { role: 'secondary', toward: [145, 0.5], stops: ['#17481f', '#2f8f3a', '#6fd36a', '#d6ffb8'] }, // кожа
-      { role: 'secondary', toward: [145, 0.5], stops: ['#17481f', '#2f8f3a', '#5cc259'] }             // лапы
+      { role: 'secondary', toward: [145, 0.5], stops: ['#17481f', '#2f8f3a', '#5cc259'] },             // лапы
+      { role: 'tertiary', stops: ['#1f4a3a', '#4a9a78', '#b8e6cf'] }   // среда: пруд с кувшинками
     ]
   };
   var UNIT = 1.1;                       // масштаб тела в ячейках
@@ -126,6 +129,7 @@
   };
 
   Frog.prototype.ring = function (env) {
+    GP.Ambient.ripple(this.x, this.y, 8);             // круг на воде
     var r0 = this.u0 * 2.6;
     for (var i = 0; i < RING_DOTS; i++) {
       var a = i / RING_DOTS * U.TAU + this.rnd() * 0.2;
@@ -185,7 +189,7 @@
   };
 
   var SPECIES = GP.species.frog = {
-    id: 'frog', label: 'Frog', count: COUNT, palette: PALETTE,
+    id: 'frog', env: ENV, drift: DRIFT, label: 'Frog', count: COUNT, palette: PALETTE,
     create: function (env, rnd, x, y) { return new Frog(env, rnd, x, y); }
   };
 })(window.GP);

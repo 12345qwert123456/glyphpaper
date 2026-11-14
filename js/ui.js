@@ -133,6 +133,7 @@
     $('set-palette').value = settings.paletteUrl;
     $('set-search').value = settings.searchUrl;
     $('set-paused').checked = settings.paused;
+    $('set-ambient').checked = settings.ambient;
     $('set-hint').checked = settings.hint;
     $('set-saver').checked = settings.saver;
     $('row-search').hidden = Storage.extension;   // в расширении поиск идёт через браузер
@@ -178,6 +179,9 @@
       settings.searchUrl = this.value.trim() || CFG.SEARCH_URL;
       this.value = settings.searchUrl;
       save();
+    });
+    $('set-ambient').addEventListener('change', function () {
+      settings.ambient = this.checked; Scene.set({ ambient: settings.ambient }); save();
     });
     $('set-paused').addEventListener('change', function () {
       settings.paused = this.checked; Scene.set({ paused: settings.paused }); save();

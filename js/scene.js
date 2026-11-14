@@ -4,10 +4,12 @@
 
   var CFG = GP.config, U = GP.util, C = GP.color;
   var A = GP.Atlas, R = GP.Raster, Pt = GP.Particles, Db = GP.Debris, Pal = GP.Palette, Cr = GP.Creature;
+  var Am = GP.Ambient;
 
   var canvas, ctx;
   var grid = { cell: CFG.CELL, cd: CFG.CELL, dpr: 1, cols: 0, rows: 0, gap: 1, W: 0, H: 0 };
   var bg = document.createElement('canvas');
+  var bgOld = document.createElement('canvas'), bgFade = 1;   // прежний фон тает при смене вида
   var halos = [];                        // подсветка сетки вокруг существ, три размера
   var HALO_SIZES = [10, 16, 24];
 
@@ -16,9 +18,9 @@
   var current = null;
   var opts = {
     cell: CFG.CELL, countScale: 1, density: CFG.GLYPH_DENSITY,
-    paused: false, saver: false, adapt: true, wallpaper: false, fps: 0
+    paused: false, saver: false, adapt: true, wallpaper: false, fps: 0, ambient: true
   };
-  var autoCell = 0, particleScale = 1;
+  var autoCell = 0, particleScale = 1, ambientScale = 1;
   var reduced = false;
   var time = 0, last = 0, raf = 0, dirty = true, running = false;
   var windowActive = true;
@@ -47,6 +49,7 @@
     var cd = grid.cd, gap = grid.gap, k;
     for (k = 1; k <= grid.cols; k++) b.fillRect(k * cd - gap, 0, gap, bg.height);
     for (k = 1; k <= grid.rows; k++) b.fillRect(0, k * cd - gap, bg.width, gap);
+    if (current) Am.bake(b, grid);          // детали пространства
   }
 
   function rebuildHalos() {
@@ -87,6 +90,8 @@
     grid.cols = Math.ceil(canvas.width / grid.cd);
     grid.rows = Math.ceil(canvas.height / grid.cd);
     env.W = W; env.H = H; env.cell = grid.cell;
+    Am.resize(W, H, grid.cell);
+    bgFade = 1;
     A.build(grid.cd);
     if (current) A.buildColored(Pal.dustColors(current));
     rebuildBg();
@@ -175,6 +180,10 @@
     Pt.clear();
     current = id;
     A.buildColored(Pal.dustColors(id));
+    // среда нового вида; прежний фон плавно тает
+    if (bg.width > 0 && !instant) { var old = bgOld; bgOld = bg; bg = old; bgFade = 0; }
+    Am.setSpecies(id);
+    rebuildBg();
     spawn(def, targetCount(def), instant ? 0 : CFG.ASSEMBLE_DELAY_MS / 1000);
     if (instant) list.forEach(function (c) { c.asm = 1; c.asmDelay = 0; });
     dirty = true;
@@ -207,8 +216,13 @@
     if (o.adapt != null) opts.adapt = o.adapt;
     if (o.wallpaper != null) opts.wallpaper = o.wallpaper;
     if (o.fps != null) opts.fps = o.fps;
+    var reAmbient = o.ambient != null && o.ambient !== opts.ambient;
+    if (reAmbient) opts.ambient = o.ambient;
+    Am.enabled = opts.ambient;
+    Am.level = (reduced ? 0.4 : opts.saver ? 0.6 : 1) * ambientScale;
     if (canvas) {
       if (regrid) rebuildGrid();
+      else if (reAmbient) rebuildBg();
       if (recount) fitCount();
       Pt.cap = Math.round(CFG.PARTICLES_MAX * particleScale * (opts.saver ? 0.5 : 1));
     }
@@ -221,6 +235,7 @@
   S.scatter = function (x, y) {
     if (reduced || opts.wallpaper) return;
     var i;
+    Am.ripple(x, y, 10);
     for (i = 0; i < list.length; i++) Cr.impulse(list[i], x, y, CFG.CLICK_IMPULSE * rnd.range(0.75, 1.25));
     var rows = A.coloredRows || 1;
     for (i = 0; i < 30; i++) {
@@ -261,14 +276,19 @@
         b.pushX += dx * f; b.pushY += dy * f;
       }
     }
-    Pt.update(dt);
+    Am.update(dt, env);
+    var carry = Am.water ? 0.4 : 0.9;       // «пыль» сносит ветром или течением
+    Pt.update(dt, Am.flow.x * carry, Am.flow.y * carry);
     Db.update(dt);
+    if (bgFade < 1) bgFade = Math.min(1, bgFade + dt / 0.7);
   }
 
   function render() {
     var cd = grid.cd, i, c;
     ctx.globalAlpha = 1;
     ctx.drawImage(bg, 0, 0);
+    if (bgFade < 1 && bgOld.width === bg.width) { ctx.globalAlpha = 1 - bgFade; ctx.drawImage(bgOld, 0, 0); ctx.globalAlpha = 1; }
+    Am.draw(ctx, grid);
 
     // сетка проявляется только рядом с существами
     for (i = 0; i < list.length; i++) {
@@ -297,8 +317,9 @@
     // качество снижается автоматически: крупнее ячейка, меньше частиц
     var changed = false;
     if (opts.cell + autoCell < CFG.CELL_MAX) { autoCell++; changed = true; }
-    if (particleScale > 0.3) { particleScale *= 0.7; changed = true; }
+    if (particleScale > 0.3) { particleScale *= 0.7; ambientScale *= 0.75; changed = true; }
     if (changed) {
+      Am.level = (reduced ? 0.4 : opts.saver ? 0.6 : 1) * ambientScale;
       rebuildGrid();
       Pt.cap = Math.round(CFG.PARTICLES_MAX * particleScale * (opts.saver ? 0.5 : 1));
       S.stats.degraded++;
@@ -323,13 +344,13 @@
     var fading = Pal.tick(Math.min(real, 0.1));
     if (fading) { rebuildBg(); if (current) A.buildColored(Pal.dustColors(current)); dirty = true; }
 
-    var busy = Db.count() > 0;
+    var busy = Db.count() > 0 || bgFade < 1;
     if (opts.paused && !dirty && !busy) return;
 
     var t0 = performance.now();
     var dt = Math.min(real, 0.05);
     if (!opts.paused) step(dt * (reduced ? 0.5 : 1));
-    else { Db.update(dt); }
+    else { Db.update(dt); if (bgFade < 1) bgFade = Math.min(1, bgFade + dt / 0.7); }
     render();
     dirty = false;
     S.stats.ms = S.stats.ms * 0.9 + (performance.now() - t0) * 0.1;
@@ -373,7 +394,7 @@
     reduced = !!(mq && mq.matches);
     env.reduced = reduced;
     if (mq && mq.addEventListener) {
-      mq.addEventListener('change', function (e) { reduced = env.reduced = e.matches; fitCount(); });
+      mq.addEventListener('change', function (e) { reduced = env.reduced = e.matches; S.set({}); fitCount(); });
     }
     S.set(o || {});
     rebuildGrid();

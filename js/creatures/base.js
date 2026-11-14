@@ -72,8 +72,10 @@
     c.pushX *= k; c.pushY *= k;
     c.excite *= Math.exp(-1.1 * dt);
 
-    c.x += (vx + c.pushX) * dt;
-    c.y += (vy + c.pushY) * dt;
+    // ветер или течение сносит существо (species.drift — насколько сильно)
+    var fl = GP.Ambient.flow, dr = c.species.drift || 0;
+    c.x += (vx + c.pushX + fl.x * dr) * dt;
+    c.y += (vy + c.pushY + fl.y * dr) * dt;
 
     // ушли за край целиком — возвращаемся с другой стороны
     var mg = c.radius + env.cell * 2, sx = 0, sy = 0;

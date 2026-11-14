@@ -5,6 +5,8 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 12;
+  var ENV = 'pond';        // среда вида (см. js/ambient.js)
+  var DRIFT = 0.15;         // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#f5c542',
     dotMaterial: 3,
@@ -14,7 +16,8 @@
       { role: 'primary', rotate: 30, stops: ['#8f3d0e', '#e06a18', '#ff8a2a', '#ffb866'] }, // 2 оранжевый
       { role: 'primary', rotate: 60, stops: ['#8a6410', '#d9a51e', '#f5c542', '#ffe58a'] }, // 3 золото
       { role: 'secondary', stops: ['#1e2128', '#3a3e48', '#5b616d'] },                  // 4 тёмные пятна и глаза
-      { role: 'tertiary', stops: ['#8c3a22', '#e0633a', '#ff9a6b'] }                    // 5 редкие рыжие пятна
+      { role: 'tertiary', stops: ['#8c3a22', '#e0633a', '#ff9a6b'] },                    // 5 редкие рыжие пятна
+      { role: 'secondary', stops: ['#1d4258', '#3f86a6', '#a6d8ea'] }   // среда: пруд
     ]
   };
   var NODES = 10;                       // узлов позвоночника
@@ -78,7 +81,10 @@
     for (var i = 0; i < NODES; i++) { this.nx[i] += sx; this.ny[i] += sy; }
   };
 
-  Koi.prototype.onScare = function () { this.mode = 2; this.mult = 2.6; this.modeT = 1.2; };
+  Koi.prototype.onScare = function () {
+    this.mode = 2; this.mult = 1.7; this.modeT = 1.2;
+    GP.Ambient.ripple(this.x, this.y, 5);            // всплеск на воде
+  };
 
   Koi.prototype.update = function (dt, env) {
     if (env.cell !== this.cell) this.geom(env);
@@ -110,7 +116,10 @@
     // иногда замедление и рывок
     this.modeT -= dt;
     if (this.mode === 0 && this.modeT <= 0) { this.mode = 1; this.modeT = this.rnd.range(0.8, 1.7); }
-    else if (this.mode === 1 && this.modeT <= 0) { this.mode = 2; this.mult = 2.3; this.modeT = 1.5; }
+    else if (this.mode === 1 && this.modeT <= 0) {
+      this.mode = 2; this.mult = 2.3; this.modeT = 1.5;
+      GP.Ambient.ripple(this.x, this.y, 4);
+    }
     else if (this.mode === 2 && this.modeT <= 0) { this.mode = 0; this.modeT = this.rnd.range(5, 14); }
     var target = this.mode === 1 ? 0.45 : 1;
     this.mult += (target - this.mult) * Math.min(1, dt * (this.mode === 2 ? 1.5 : 2.5));
@@ -263,7 +272,7 @@
   };
 
   var SPECIES = GP.species.koi = {
-    id: 'koi', label: 'Koi', count: COUNT, palette: PALETTE,
+    id: 'koi', env: ENV, drift: DRIFT, label: 'Koi', count: COUNT, palette: PALETTE,
     hueJitter: 0.5, flicker: 0.18,
     create: function (env, rnd, x, y) { return new Koi(env, rnd, x, y); }
   };

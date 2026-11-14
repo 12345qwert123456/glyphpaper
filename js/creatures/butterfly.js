@@ -4,11 +4,14 @@
 
   // ------------------------------------------------------------ параметры
   var COUNT = 16;                       // стартовое число на 1080p
+  var ENV = 'meadow';      // среда вида (см. js/ambient.js)
+  var DRIFT = 0.55;         // насколько ветер или течение сносит существо
   var PALETTE = {
     dot: '#2f6fd6',
     materials: [
       { role: 'primary', stops: ['#132a66', '#1b3f8f', '#2f6fd6', '#8fd0ff'] }, // крылья
-      { role: 'primary', stops: ['#0f2152', '#1b3f8f', '#2757b8'] }             // тело
+      { role: 'primary', stops: ['#0f2152', '#1b3f8f', '#2757b8'] },             // тело
+      { role: 'on_surface_variant', stops: ['#2a3f66', '#5f86c4', '#a9c8f0'] }   // среда: луг, ветер, пыльца
     ]
   };
   var SPAN_CELLS = [3.2, 12];           // размах крыльев, ячеек
@@ -84,7 +87,7 @@
       (U.noise1(this.t * 1.7, this.seed + 5) - 0.5) * 0.9;
     this.heading += w * dt;
 
-    var hz = this.hz * (this.hover ? HOVER_FLAP : 1) * (1 + 0.7 * this.excite);
+    var hz = this.hz * (this.hover ? HOVER_FLAP : 1) * (1 + 0.4 * this.excite);
     this.phase += Math.PI * hz * dt;
     this.flap = Math.max(FLAP_MIN, Math.abs(Math.cos(this.phase)));
 
@@ -158,7 +161,7 @@
   };
 
   var SPECIES = GP.species.butterfly = {
-    id: 'butterfly', label: 'Butterfly', count: COUNT, palette: PALETTE, hueJitter: 0.7,
+    id: 'butterfly', env: ENV, drift: DRIFT, label: 'Butterfly', count: COUNT, palette: PALETTE, hueJitter: 0.7,
     create: function (env, rnd, x, y) { return new Butterfly(env, rnd, x, y); }
   };
 })(window.GP);

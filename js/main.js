@@ -22,6 +22,7 @@
     paused: false,
     hint: true,
     saver: false,
+    ambient: true,
     colorMode: 'auto',
     paletteUrl: CFG.PALETTE_URL,
     searchUrl: CFG.SEARCH_URL
@@ -61,7 +62,7 @@
     GP.Palette.init(live.colorMode);
     GP.Scene.init(document.getElementById('scene'), {
       cell: live.cell, countScale: live.countScale, density: live.density,
-      paused: live.paused, saver: live.saver, wallpaper: wallpaper,
+      paused: live.paused, saver: live.saver, ambient: live.ambient !== false, wallpaper: wallpaper,
       adapt: q.adapt !== '0', fps: U.clamp(+q.fps || 0, 0, 240)
     });
 
