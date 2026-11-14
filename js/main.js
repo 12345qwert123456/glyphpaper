@@ -29,6 +29,10 @@
     grid: 1,
     dust: 1,
     effects: 1,
+    ground: 1,
+    pickerHidden: false,
+    tints: {},
+    tintAll: '',
     voice: true,
     voiceAuto: false,
     voiceLang: '',
@@ -63,7 +67,15 @@
     delete s.ambient;
     var num = function (key, lo, hi) { var v = +s[key]; s[key] = U.clamp(isNaN(v) ? DEFAULTS[key] : v, lo, hi); };
     num('speed', 0.25, 2); num('size', 0.6, 1.6); num('react', 0, 2);
-    num('grid', 0, 2); num('dust', 0, 2); num('effects', 0, 1.5);
+    num('grid', 0, 2); num('dust', 0, 2); num('effects', 0, 2); num('ground', 0, 2);
+    s.pickerHidden = !!s.pickerHidden;
+    // принудительные цвета: только #rrggbb; копия, чтобы не портить DEFAULTS
+    var hex6 = /^#[0-9a-f]{6}$/i, tints = {};
+    if (s.tints && typeof s.tints === 'object') {
+      for (var tid in s.tints) if (GP.species[tid] && (s.tints[tid] === '' || hex6.test(s.tints[tid]))) tints[tid] = s.tints[tid];
+    }
+    s.tints = tints;
+    if (!hex6.test(s.tintAll)) s.tintAll = '';
 
     // параметры адреса действуют на один сеанс и не сохраняются
     var live = Object.assign({}, s);
@@ -78,10 +90,11 @@
     document.body.classList.toggle('wallpaper', wallpaper);
 
     GP.Palette.init(live.colorMode);
+    GP.Palette.setOverrides(GP.Palette.tintsFrom(live), true);
     GP.Scene.init(document.getElementById('scene'), {
       cell: live.cell, countScale: live.countScale, density: live.density,
       paused: live.paused, saver: live.saver, wallpaper: wallpaper,
-      speed: live.speed, size: live.size, react: live.react, grid: live.grid, dust: live.dust, effects: live.effects,
+      speed: live.speed, size: live.size, react: live.react, grid: live.grid, dust: live.dust, effects: live.effects, ground: live.ground,
       adapt: q.adapt !== '0', fps: U.clamp(+q.fps || 0, 0, 240)
     });
 

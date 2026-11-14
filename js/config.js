@@ -74,7 +74,8 @@
     // --- поиск на обычной странице ---
     SEARCH_URL: 'https://duckduckgo.com/?q=%s',
 
-    SPECIES_ORDER: ['butterfly', 'jellyfish', 'dragonfly', 'koi', 'frog', 'crane', 'crab'],
+    SPECIES_ORDER: ['butterfly', 'jellyfish', 'dragonfly', 'koi', 'frog', 'crane', 'crab',
+      'turtle', 'ladybug', 'swan', 'ray', 'snake'],
     DEFAULT_SPECIES: 'butterfly'
   };
 

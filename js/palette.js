@@ -17,6 +17,7 @@
     mode: 'auto',        // настройка пользователя: auto | natural | adaptive
     active: 'natural',   // что реально показано
     system: null,        // нормализованные роли палитры системы или null
+    overrides: {},       // принудительные цвета видов: id → [r, g, b]
     version: 0,          // растёт при любом изменении текущих цветов
     onChange: null
   };
@@ -145,10 +146,57 @@
     for (var id in cur.species) st.setProperty('--dot-' + id, C.css(cur.species[id].dot));
   }
 
+  /** Рампа в заданном цвете: светлота остаётся от рампы вида (со сдвигом к светлоте цвета),
+   *  оттенок и насыщенность — от выбранного. Нейтральные материалы (белый, чёрный) не трогаем. */
+  function tintStops(stops, base) {
+    var nat = stops.map(C.toOklch), cmax = 0.0001;
+    nat.forEach(function (n) { if (n[1] > cmax) cmax = n[1]; });
+    if (cmax < 0.03) return stops;
+    var shift = (base[0] - nat[stops.length >> 1][0]) * 0.6;
+    return nat.map(function (n) {
+      var L = Math.max(0.12, Math.min(0.9, n[0] + shift));
+      return C.fromOklch(L, base[1] * (0.35 + 0.65 * n[1] / cmax), base[2]);
+    });
+  }
+
+  /** Накладывает принудительные цвета; среда вида (последний материал) не перекрашивается. */
+  function withOverrides(obj) {
+    var ids = Object.keys(P.overrides);
+    if (!ids.length) return obj;
+    var out = clone(obj);
+    ids.forEach(function (id) {
+      var sp = out.species[id];
+      if (!sp) return;
+      var base = C.toOklch(P.overrides[id]), last = sp.mats.length - 1;
+      sp.mats = sp.mats.map(function (m, i) { return i === last ? m : tintStops(m, base); });
+      sp.dot = P.overrides[id].slice();
+    });
+    return out;
+  }
+
+  /** Принудительные цвета видов из настроек: у вида свой цвет важнее общего. */
+  P.tintsFrom = function (s) {
+    var out = {}, ok = /^#[0-9a-f]{6}$/i;
+    CFG.SPECIES_ORDER.forEach(function (id) {
+      var t = s.tints && id in s.tints ? s.tints[id] : s.tintAll;   // '' — вид оставлен натуральным
+      if (t && ok.test(t)) out[id] = t;
+    });
+    return out;
+  };
+
+  /** map: id → '#rrggbb'. Цвета перетекают плавно; instant — сразу (при запуске). */
+  P.setOverrides = function (map, instant) {
+    var next = {};
+    for (var id in map) if (map[id]) next[id] = C.hex(map[id]);
+    if (JSON.stringify(next) === JSON.stringify(P.overrides)) return;
+    P.overrides = next;
+    if (cur) retarget(!!instant);
+  };
+
   function retarget(instant) {
     var useAdaptive = P.mode !== 'natural' && !!P.system;
     P.active = useAdaptive ? 'adaptive' : 'natural';
-    var next = useAdaptive ? buildAdaptive(P.system) : natural;
+    var next = withOverrides(useAdaptive ? buildAdaptive(P.system) : natural);
     if (!cur || instant) {
       cur = clone(next); to = next; from = cur; fade = 1;
     } else {
@@ -199,6 +247,7 @@
    *  «светлая ячейка» (на ней символ рисуется тёмным). */
   P.rampsFor = function (id, hueShift) {
     var mats = cur.species[id].mats, n = CFG.SHADES, out = [];
+    if (P.overrides[id]) hueShift *= 0.2;        // принудительный цвет: особи почти не отличаются оттенком
     for (var m = 0; m < mats.length; m++) {
       var stops = mats[m];
       if (hueShift) stops = stops.map(function (c) { return C.shiftHue(c, hueShift); });

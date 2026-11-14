@@ -14,12 +14,12 @@
   // ----------------------------------------------------------- переключатель
 
   function buildSwitcher() {
-    var nav = $('switcher');
+    var nav = $('species-list');
     CFG.SPECIES_ORDER.forEach(function (id, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.dataset.species = id;
-      b.title = GP.species[id].label + ' — ' + (i + 1);
+      b.title = GP.species[id].label + (i < 10 ? ' — ' + ((i + 1) % 10) : '');
       var dot = document.createElement('i');
       dot.className = 'dot';
       dot.style.background = 'var(--dot-' + id + ')';
@@ -31,20 +31,46 @@
   }
 
   function markSwitcher() {
-    var bs = $('switcher').querySelectorAll('button');
+    var list = $('species-list'), bs = list.querySelectorAll('button');
     for (var i = 0; i < bs.length; i++) {
       var on = bs[i].dataset.species === settings.species;
       bs[i].setAttribute('aria-pressed', on ? 'true' : 'false');
-      if (on && bs[i].scrollIntoView && $('switcher').scrollWidth > $('switcher').clientWidth) {
-        bs[i].scrollIntoView({ block: 'nearest', inline: 'center' });
+      if (on && !settings.pickerHidden && list.scrollWidth > list.clientWidth) {
+        list.scrollLeft = bs[i].offsetLeft - (list.clientWidth - bs[i].offsetWidth) / 2;
       }
     }
+    $('picker-dot').style.background = 'var(--dot-' + settings.species + ')';
   }
+
+  /** Панель видов сворачивается в маленькую кнопку с точкой текущего вида. */
+  function applyPicker() {
+    var hidden = !!settings.pickerHidden;
+    $('switcher').classList.toggle('collapsed', hidden);
+    var t = $('picker-toggle');
+    t.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+    var label = hidden ? 'Show creature picker' : 'Hide creature picker';
+    t.title = label; t.setAttribute('aria-label', label);
+    $('set-picker').checked = !hidden;
+  }
+
+  function setPicker(hidden) {
+    settings.pickerHidden = hidden;
+    applyPicker();
+    markSwitcher();
+    save();
+  }
+
+  /** Соседний вид по кругу: dir = 1 — следующий, −1 — предыдущий. */
+  UI.step = function (dir) {
+    var o = CFG.SPECIES_ORDER, i = o.indexOf(settings.species);
+    UI.select(o[(i + dir + o.length) % o.length]);
+  };
 
   UI.select = function (id) {
     if (!GP.species[id] || id === settings.species) return;
     settings.species = id;
     markSwitcher();
+    if ($('tint-swatches').firstChild) markTint();
     Scene.setSpecies(id);
     $('out-count').textContent = Scene.count();
     save();
@@ -161,6 +187,69 @@
     voiceUi();
   }
 
+  // ------------------------------------------------ принудительный цвет
+
+  var TINTS = ['#e8392b', '#ff8a2a', '#f5c542', '#8fd14f', '#2fb26a', '#2fc4b0', '#4fb0f0', '#3f6fe0', '#9a6cf0', '#f06cb4', '#e8eaf0'];
+
+  /** Цвет вида сейчас: свой, затем общий; '' — натуральный. */
+  function tintOf(id) {
+    return settings.tints && id in settings.tints ? settings.tints[id] : settings.tintAll || '';
+  }
+
+  function applyTints() { Pal.setOverrides(Pal.tintsFrom(settings)); }
+
+  function markTint() {
+    var cur = tintOf(settings.species), bs = $('tint-swatches').querySelectorAll('.swatch');
+    for (var i = 0; i < bs.length; i++) {
+      var c = bs[i].dataset.color;
+      bs[i].setAttribute('aria-checked', (c === 'auto' ? !cur : c === cur) ? 'true' : 'false');
+    }
+    var custom = $('tint-custom');
+    custom.value = cur || '#ffffff';
+    custom.classList.toggle('on', !!cur && TINTS.indexOf(cur) < 0);
+    $('out-tint').textContent = cur || 'natural';
+    $('set-tintAll').checked = !!settings.tintAll;
+  }
+
+  function pickTint(hex) {
+    if ($('set-tintAll').checked) { settings.tintAll = hex; settings.tints = {}; }
+    else if (hex) settings.tints[settings.species] = hex;
+    else settings.tints[settings.species] = '';          // этот вид — натуральным, даже если задан общий цвет
+    if (!hex && $('set-tintAll').checked) settings.tintAll = '';
+    applyTints(); markTint(); save();
+  }
+
+  function buildTints() {
+    var box = $('tint-swatches');
+    function swatch(color, label) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'swatch'; b.setAttribute('role', 'radio'); b.dataset.color = color;
+      b.title = b.ariaLabel = label;
+      b.setAttribute('aria-label', label);
+      if (color === 'auto') b.textContent = 'A'; else b.style.setProperty('--c', color);
+      b.addEventListener('click', function () { pickTint(color === 'auto' ? '' : color); });
+      box.appendChild(b);
+    }
+    swatch('auto', 'Natural color');
+    TINTS.forEach(function (c) { swatch(c, c); });
+    var custom = document.createElement('input');
+    custom.type = 'color'; custom.id = 'tint-custom'; custom.className = 'swatch-custom';
+    custom.title = 'Any color'; custom.setAttribute('aria-label', 'Any color');
+    custom.addEventListener('input', function () { pickTint(this.value); });
+    box.appendChild(custom);
+    $('set-tintAll').addEventListener('change', function () {
+      if (this.checked) {
+        // общий цвет берём у текущего вида; если у него натуральный — ничего не красим
+        settings.tintAll = tintOf(settings.species) || '';
+        settings.tints = {};
+      } else {
+        settings.tintAll = '';
+      }
+      applyTints(); markTint(); save();
+    });
+    markTint();
+  }
+
   // -------------------------------------------------------------- настройки
 
   // ползунки: id элемента, ключ настройки (он же параметр сцены), множитель и подпись
@@ -173,6 +262,7 @@
     { id: 'density', key: 'density', k: 100 },
     { id: 'grid', key: 'grid', k: 100, off: true },
     { id: 'dust', key: 'dust', k: 100, off: true },
+    { id: 'ground', key: 'ground', k: 100, off: true },
     { id: 'effects', key: 'effects', k: 100, off: true }
   ];
 
@@ -237,6 +327,11 @@
         save();
       });
     });
+
+    buildTints();
+    $('picker-toggle').addEventListener('click', function () { setPicker(!settings.pickerHidden); });
+    $('set-picker').addEventListener('change', function () { setPicker(!this.checked); });
+    applyPicker();
 
     $('set-name').addEventListener('input', function () {
       settings.name = this.value; greeting(); save();
@@ -335,11 +430,14 @@
         return;
       }
       if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key >= '1' && e.key <= '7') {
-        UI.select(CFG.SPECIES_ORDER[+e.key - 1]);
+      // 1–9 и 0 выбирают первые десять видов; [ и ] листают все по кругу
+      if (e.key >= '0' && e.key <= '9') {
+        var idx = e.key === '0' ? 9 : +e.key - 1;
+        if (CFG.SPECIES_ORDER[idx]) UI.select(CFG.SPECIES_ORDER[idx]);
         e.preventDefault();
         return;
       }
+      if (e.key === '[' || e.key === ']') { UI.step(e.key === ']' ? 1 : -1); e.preventDefault(); return; }
       if (e.key === '/') { $('q').focus(); e.preventDefault(); return; }
       // любой печатный символ уходит в поле ввода
       if (e.key.length === 1 && e.key !== ' ') $('q').focus();

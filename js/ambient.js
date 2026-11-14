@@ -144,6 +144,7 @@
   // ----------------------------------------------------------------------
 
   var Am = GP.Ambient = {
+    ground: 1,               // видимость дна: 0 — скрыто, 1 — как задумано, до 2 — ярче и шире
     flow: { x: 0, y: 0 },    // ветер или течение, px/с — сносит «пыль» и существ
     water: false,
     enabled: true,
@@ -183,6 +184,9 @@
     sceneCss = {};
   };
 
+  /** Пересобирает растения дна (после смены видимости земли). */
+  Am.replant = function () { if (preset) buildPlants(); };
+
   Am.resize = function (w, h, c) { W = w; H = h; cell = c; if (preset) buildPlants(); };
 
   /** Круг на воде (клик, приземление лягушки, рывок рыбы). */
@@ -212,7 +216,8 @@
     var g = preset.ground;
     if (!g) return 0;
     var r = fbm(i * 0.045, j * 0.045, seed + 700);
-    return U.smooth((r - g.thr) / 0.16 + 0.5);
+    // чем больше «видимость земли», тем шире пятна, где дно проглядывает
+    return U.smooth((r - (g.thr - (Am.ground - 1) * 0.14)) / 0.16 + 0.5);
   }
 
   /** Подвижные элементы дна: травинки под ветром, водоросли в течении. */
@@ -254,12 +259,13 @@
   /** Вид сверху: травинки клонятся по ветру, водоросли вытягиваются по течению и колышутся. */
   function drawPlants(ctx, grid, vis) {
     var fx = Am.flow.x, fy = Am.flow.y, fs = Math.sqrt(fx * fx + fy * fy), fa = Math.atan2(fy, fx);
+    var sway = Am.enabled ? Math.min(1.4, Am.level) : 0;        // раскачка растений — часть эффектов
     for (var i = 0; i < plants.length; i++) {
-      var p = plants[i], css = sceneColor(p.css), base = p.a * p.rv * vis;
+      var p = plants[i], css = sceneColor(p.css), base = p.a * p.rv * vis * Math.min(1.5, Am.ground);
       if (p.kind === 'tuft') {
         // в тишине травинка видна сверху точкой, под ветром ложится штрихом
         var lean = U.clamp(fs / 30, 0, 1);
-        var ang = fa + Math.sin(t * p.w * 2 + p.ph) * 0.5 * p.amp;
+        var ang = fa + Math.sin(t * p.w * 2 + p.ph) * 0.5 * p.amp * sway;
         tile(ctx, grid, Math.floor(p.x), Math.floor(p.y), css, base * (0.7 + 0.5 * lean),
           lean > 0.3 ? strokeFor(ang) : A.index["'"]);
         if (lean > 0.55) tile(ctx, grid, Math.floor(p.x + Math.cos(ang)), Math.floor(p.y + Math.sin(ang)), css, base * 0.5 * lean, strokeFor(ang));
@@ -269,7 +275,7 @@
       var dir = fs > 1.5 ? p.ang + U.angDiff(p.ang, fa) * Math.min(1, fs / 6) : p.ang;
       var x = p.x, y = p.y, prev = -1;
       for (var k = 0; k < p.len; k++) {
-        var a = dir + Math.sin(t * p.w + p.ph - k * 0.7) * 0.55 * p.amp;
+        var a = dir + Math.sin(t * p.w + p.ph - k * 0.7) * 0.55 * p.amp * sway;
         var ci = Math.floor(x), cj = Math.floor(y), key = cj * 10000 + ci;
         if (key !== prev) tile(ctx, grid, ci, cj, css, base * (1 - 0.45 * k / p.len), k === 0 ? A.ramp[4] : strokeFor(a));
         prev = key;
@@ -281,7 +287,8 @@
   /** Дно (земля под водой или воздухом) запекается в фон и проглядывает пятнами. */
   function bakeGround(b, grid) {
     var g = preset.ground;
-    if (!g) return;
+    if (!g || Am.ground < 0.02) return;
+    var dep = g.depth * Math.min(1.6, Am.ground);              // прозрачность дна
     var cd = grid.cd, cols = grid.cols, rows = grid.rows, pr = U.rng(seed + 900), i, j, k;
     var rv = new Float32Array(cols * rows);
     function cellAt(ci, cj, css, alpha) {
@@ -309,8 +316,8 @@
         if (g.quant) m = Math.floor(m * 7) / 7 + 0.07;        // лоскуты полей с чёткими краями
         for (k = 0; k < g.layers.length - 1 && m > g.layers[k].upto; k++) { /* ищем слой */ }
         var L = g.layers[k], h = U.hash(i, j, seed + 720);
-        cellAt(i, j, css[k], L.a * v * g.depth * (0.65 + 0.7 * h));
-        if (L.glyphs && U.hash(i, j, seed + 721) < L.gd) glyphAt(i, j, L.glyphs[(h * L.glyphs.length) | 0], css[k], 0.55 * v * g.depth);
+        cellAt(i, j, css[k], L.a * v * dep * (0.65 + 0.7 * h));
+        if (L.glyphs && U.hash(i, j, seed + 721) < L.gd) glyphAt(i, j, L.glyphs[(h * L.glyphs.length) | 0], css[k], 0.55 * v * dep);
       }
     }
 
@@ -321,7 +328,7 @@
         var ry = rows * (0.25 + 0.5 * U.noise1(i * 0.012, seed + 730)) + 5 * Math.sin(i * 0.06 + seed % 7);
         for (j = Math.floor(ry - g.river.w - 1); j <= ry + g.river.w + 1; j++) {
           var dd = Math.abs(j + 0.5 - ry) / g.river.w;
-          if (dd < 1) cellAt(i, j, rc, 0.16 * (1 - 0.4 * dd) * rvAt(i, j) * g.depth);
+          if (dd < 1) cellAt(i, j, rc, 0.16 * (1 - 0.4 * dd) * rvAt(i, j) * dep);
         }
       }
     }
@@ -337,7 +344,7 @@
           for (i = Math.floor(sx - rx); i <= sx + rx; i++) {
             var ex = (i + 0.5 - sx) / rx, ey = (j + 0.5 - sy) / ry2;
             if (ex * ex + ey * ey > 1) continue;
-            cellAt(i, j, ex + ey < -0.5 ? '#8b93a0' : '#59606c', (0.22 + 0.1 * U.hash(i, j, seed + 51)) * sv * g.depth);
+            cellAt(i, j, ex + ey < -0.5 ? '#8b93a0' : '#59606c', (0.22 + 0.1 * U.hash(i, j, seed + 51)) * sv * dep);
           }
         }
       }
@@ -355,8 +362,8 @@
             var dx = i + 0.5 - bx, dy = j + 0.5 - by;
             if (dx * dx + dy * dy > br * br || pr() > bl.fill) continue;
             var col = sceneColor(bl.colors[(pr() * bl.colors.length) | 0]);
-            cellAt(i, j, col, bl.a * 0.6 * bv * g.depth);
-            if (pr() < 0.6) glyphAt(i, j, bl.glyphs[(pr() * bl.glyphs.length) | 0], col, bl.a * bv * g.depth);
+            cellAt(i, j, col, bl.a * 0.6 * bv * dep);
+            if (pr() < 0.6) glyphAt(i, j, bl.glyphs[(pr() * bl.glyphs.length) | 0], col, bl.a * bv * dep);
           }
         }
       }
@@ -384,7 +391,7 @@
 
   /** Запекает детали пространства в фон (вызывается при пересборке фона). */
   Am.bake = function (b, grid) {
-    if (!preset || !Am.enabled) return;
+    if (!preset) return;                      // запекается всегда: дно и детали не зависят от «Space effects»
     var cd = grid.cd, cols = grid.cols, rows = grid.rows, i, j, k;
     var stops = Pal.ambient(species.id);
     var mid = C.css(stops[1]), light = C.css(stops[stops.length - 1]);
@@ -632,11 +639,14 @@
   // ------------------------------------------------------------ отрисовка
 
   Am.draw = function (ctx, grid) {
-    if (!preset || !Am.enabled || !A.colored) return;
+    if (!preset || !A.colored) return;
+    // дно и его растения видны всегда; ползунок «Space effects» управляет только движущимся
+    if (plants.length && Am.ground > 0.02) drawPlants(ctx, grid, fade);
+    if (!Am.enabled) return;
     var cd = grid.cd, cl = grid.cell, gap = grid.gap, i, k, o, a;
     var img = A.colored, r0 = row * cd, r1 = (row + 1) * cd;
-    var vis = fade * (0.5 + 0.5 * Am.level);
-    if (plants.length) drawPlants(ctx, grid, vis);      // подвижное дно — под полем и эффектами
+    // яркость эффектов растёт вместе с ползунком: 10% — еле заметно, 100% — как задумано, выше — ярче
+    var vis = fade * Math.min(1.7, Am.level);
 
     // поле: едва заметные тайлы
     var f = preset.field;

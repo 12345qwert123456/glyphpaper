@@ -53,11 +53,18 @@ button:disabled { cursor: default; }
   border-radius: 16px;
   background: rgba(var(--ui-surface), 0.72);
   border: 1px solid rgba(var(--ui-text), 0.08);
-  overflow-x: auto;
-  scrollbar-width: none;
   z-index: 3;
 }
-.pill::-webkit-scrollbar { display: none; }
+
+.species-list {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.species-list::-webkit-scrollbar { display: none; }
 
 .pill button {
   display: inline-flex;
@@ -77,6 +84,15 @@ button:disabled { cursor: default; }
 .pill button:hover { background: rgba(var(--ui-text), 0.07); color: rgba(var(--ui-text), 0.88); }
 .pill button[aria-pressed="true"] { background: rgba(var(--ui-text), 0.14); color: rgb(var(--ui-text)); }
 .pill .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+/* кнопка сворачивания панели видов */
+.pill .picker-toggle { flex: none; margin-left: 2px; padding: 0 8px; gap: 5px; border-left: 1px solid rgba(var(--ui-text), 0.08); border-radius: 0 12px 12px 0; }
+.pill .picker-toggle svg { transition: transform 160ms ease; }
+.pill .picker-toggle .dot { display: none; }
+.pill.collapsed .species-list { display: none; }
+.pill.collapsed .picker-toggle { margin: 0; border-left: 0; border-radius: 12px; padding: 0 10px; }
+.pill.collapsed .picker-toggle .dot { display: block; }
+.pill.collapsed .picker-toggle svg { transform: rotate(180deg); }
 
 /* ------------------------------------------------------------- настройки */
 
@@ -166,6 +182,41 @@ button:disabled { cursor: default; }
 .toggle { display: flex; align-items: center; gap: 9px; color: rgba(var(--ui-text), 0.85); cursor: pointer; }
 .toggle input { width: 15px; height: 15px; margin: 0; accent-color: rgba(var(--ui-text), 0.85); cursor: pointer; }
 .toggle span { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--ui-text), 0.2);
+  background: var(--c, transparent);
+  color: rgba(var(--ui-text), 0.65);
+  font-size: 10px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  transition: transform 120ms ease;
+}
+.swatch:hover { transform: scale(1.12); }
+.swatch[aria-checked="true"], .swatch-custom.on { outline: 1.5px solid rgb(var(--ui-text)); outline-offset: 2px; }
+.swatch-custom {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1.5px solid rgba(var(--ui-text), 0.2);
+  border-radius: 50%;
+  background: conic-gradient(#f55, #fc5, #5f8, #5cf, #a6f, #f5a, #f55);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+.swatch-custom::-webkit-color-swatch-wrapper { padding: 0; }
+.swatch-custom::-webkit-color-swatch { border: 0; border-radius: 50%; opacity: 0; }
+.swatch-custom::-moz-color-swatch { border: 0; opacity: 0; }
+.swatch-custom.on::-webkit-color-swatch { opacity: 1; }
+.swatch-custom.on::-moz-color-swatch { opacity: 1; }
 
 .segmented {
   display: grid;

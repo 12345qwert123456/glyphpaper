@@ -12,7 +12,13 @@
 <body>
   <canvas id="scene" aria-hidden="true"></canvas>
 
-  <nav id="switcher" class="pill" aria-label="Creatures"></nav>
+  <nav id="switcher" class="pill" aria-label="Creatures">
+    <div id="species-list" class="species-list"></div>
+    <button id="picker-toggle" class="picker-toggle" type="button" aria-label="Hide creature picker" title="Hide creature picker" aria-expanded="true">
+      <i id="picker-dot" class="dot"></i>
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+    </button>
+  </nav>
 
   <button id="settings-btn" class="round" type="button" aria-label="Settings" aria-expanded="false" aria-controls="settings">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -36,9 +42,10 @@
     <h2>Look</h2>
     <label class="field"><span>Cell size <output id="out-cell"></output></span><input id="set-cell" type="range" min="6" max="14" step="1"></label>
     <label class="field"><span>Glyph density <output id="out-density"></output></span><input id="set-density" type="range" min="0" max="100" step="5"></label>
-    <label class="field"><span>Grid <output id="out-grid"></output></span><input id="set-grid" type="range" min="0" max="200" step="10"></label>
-    <label class="field"><span>Dust <output id="out-dust"></output></span><input id="set-dust" type="range" min="0" max="200" step="10"></label>
-    <label class="field"><span>Space effects <output id="out-effects"></output></span><input id="set-effects" type="range" min="0" max="150" step="10"></label>
+    <label class="field"><span>Grid <output id="out-grid"></output></span><input id="set-grid" type="range" min="0" max="200" step="5"></label>
+    <label class="field"><span>Dust <output id="out-dust"></output></span><input id="set-dust" type="range" min="0" max="200" step="5"></label>
+    <label class="field"><span>Ground <small>how much land shows through</small> <output id="out-ground"></output></span><input id="set-ground" type="range" min="0" max="200" step="5"></label>
+    <label class="field"><span>Space effects <small>wind, waves, bubbles</small> <output id="out-effects"></output></span><input id="set-effects" type="range" min="0" max="200" step="5"></label>
 
     <h2>Colors</h2>
     <div class="field">
@@ -48,6 +55,11 @@
         <button type="button" role="radio" data-mode="natural">Natural</button>
         <button type="button" role="radio" data-mode="adaptive">Adaptive</button>
       </div>
+    </div>
+    <div class="field" id="row-tint">
+      <span>Creature color <small>forces the color</small> <output id="out-tint"></output></span>
+      <div class="swatches" id="tint-swatches" role="radiogroup" aria-label="Creature color"></div>
+      <label class="toggle"><input id="set-tintAll" type="checkbox"><span>Use for all creatures</span></label>
     </div>
     <label class="field" id="row-palette">
       <span>Palette URL</span>
@@ -65,6 +77,9 @@
       <span>Voice language <small>empty = browser</small></span>
       <input id="set-voiceLang" type="text" maxlength="12" placeholder="ru-RU, en-US…" autocomplete="off" spellcheck="false">
     </label>
+
+    <h2>Interface</h2>
+    <label class="toggle"><input id="set-picker" type="checkbox"><span>Show creature picker</span></label>
 
     <h2>Animation</h2>
     <label class="toggle"><input id="set-paused" type="checkbox"><span>Pause animation</span></label>
@@ -107,10 +122,16 @@
   <script src="js/creatures/butterfly.js"></script>
   <script src="js/creatures/jellyfish.js"></script>
   <script src="js/creatures/dragonfly.js"></script>
+  <script src="js/creatures/chain.js"></script>
   <script src="js/creatures/koi.js"></script>
   <script src="js/creatures/frog.js"></script>
   <script src="js/creatures/crane.js"></script>
   <script src="js/creatures/crab.js"></script>
+  <script src="js/creatures/turtle.js"></script>
+  <script src="js/creatures/ladybug.js"></script>
+  <script src="js/creatures/swan.js"></script>
+  <script src="js/creatures/ray.js"></script>
+  <script src="js/creatures/snake.js"></script>
   <script src="js/palette.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/scene.js"></script>

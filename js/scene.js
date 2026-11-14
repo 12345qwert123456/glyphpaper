@@ -22,11 +22,12 @@
     speed: 1,      // множитель скорости существ
     size: 1,       // множитель размера существ
     react: 1,      // сила реакции на курсор (0 — не реагируют)
-    effects: 1,    // количество эффектов среды (0 — выключены)
+    effects: 1,    // количество и яркость движущихся эффектов среды (0 — выключены)
+    ground: 1,     // видимость земли под водой и воздухом (0 — скрыта)
     dust: 1,       // количество «пыли» от существ
     grid: 1        // заметность сетки
   };
-  var autoCell = 0, particleScale = 1, ambientScale = 1;
+  var autoCell = 0, particleScale = 1, ambientScale = 1, bgDirty = false;
   var reduced = false;
   var time = 0, last = 0, raf = 0, dirty = true, running = false;
   var windowActive = true;
@@ -242,16 +243,14 @@
     if (o.dust != null) opts.dust = o.dust;
     if (o.size != null && o.size !== opts.size) { opts.size = o.size; env.cell = grid.cell * opts.size; }
     if (o.grid != null && o.grid !== opts.grid) { opts.grid = o.grid; rebg = true; }
-    if (o.effects != null && o.effects !== opts.effects) {
-      if ((o.effects > 0) !== (opts.effects > 0)) rebg = true;
-      opts.effects = o.effects;
-    }
+    if (o.effects != null) opts.effects = o.effects;
+    if (o.ground != null && o.ground !== opts.ground) { opts.ground = o.ground; Am.ground = o.ground; rebg = true; }
     env.react = opts.react;
     Am.enabled = opts.effects > 0.01;
     Am.level = ambientLevel();
     if (canvas) {
       if (regrid) rebuildGrid();
-      else if (rebg) rebuildBg();
+      else if (rebg) bgDirty = true;           // фон перерисуется в ближайшем кадре (ползунок не тормозит)
       if (recount) fitCount();
       Pt.cap = particleCap();
     }
@@ -507,6 +506,7 @@
     var fading = Pal.tick(Math.min(real, 0.1));
     if (fading) { rebuildBg(); if (current) A.buildColored(Pal.dustColors(current)); dirty = true; }
 
+    if (bgDirty) { bgDirty = false; rebuildBg(); Am.replant(); dirty = true; }
     var busy = Db.count() > 0 || bgFade < 1;
     if (opts.paused && !dirty && !busy) return;
 
