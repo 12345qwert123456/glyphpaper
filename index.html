@@ -58,7 +58,14 @@
     </div>
     <div class="field" id="row-tint">
       <span>Creature color <small>forces the color</small> <output id="out-tint"></output></span>
-      <div class="swatches" id="tint-swatches" role="radiogroup" aria-label="Creature color"></div>
+      <div class="wheel-box">
+        <canvas id="wheel" class="wheel" width="132" height="132" role="img" aria-label="Color wheel: hue and saturation"></canvas>
+        <div class="wheel-side">
+          <label class="mini">Brightness<input id="wheel-val" class="wheel-val" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="mini">Hex<input id="wheel-hex" type="text" maxlength="7" placeholder="#rrggbb" autocomplete="off" spellcheck="false"></label>
+          <button id="wheel-reset" class="reset small" type="button">Natural</button>
+        </div>
+      </div>
       <label class="toggle"><input id="set-tintAll" type="checkbox"><span>Use for all creatures</span></label>
     </div>
     <label class="field" id="row-palette">
@@ -129,8 +136,8 @@
   <script src="js/creatures/crab.js"></script>
   <script src="js/creatures/turtle.js"></script>
   <script src="js/creatures/ladybug.js"></script>
-  <script src="js/creatures/swan.js"></script>
-  <script src="js/creatures/ray.js"></script>
+  <script src="js/creatures/starfish.js"></script>
+  <script src="js/creatures/spider.js"></script>
   <script src="js/creatures/snake.js"></script>
   <script src="js/palette.js"></script>
   <script src="js/ambient.js"></script>

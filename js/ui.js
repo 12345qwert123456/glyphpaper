@@ -70,7 +70,7 @@
     if (!GP.species[id] || id === settings.species) return;
     settings.species = id;
     markSwitcher();
-    if ($('tint-swatches').firstChild) markTint();
+    if ($('wheel')) markTint();
     Scene.setSpecies(id);
     $('out-count').textContent = Scene.count();
     save();
@@ -189,7 +189,26 @@
 
   // ------------------------------------------------ принудительный цвет
 
-  var TINTS = ['#e8392b', '#ff8a2a', '#f5c542', '#8fd14f', '#2fb26a', '#2fc4b0', '#4fb0f0', '#3f6fe0', '#9a6cf0', '#f06cb4', '#e8eaf0'];
+  // Круг цветов: угол — оттенок, расстояние от центра — насыщенность; яркость — отдельным ползунком.
+  var wheel = { h: 0, s: 0, v: 1, on: false };
+  var saveT = 0;
+
+  function hsvToRgb(h, s, v) {
+    var f = function (n) { var k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [f(5) * 255, f(3) * 255, f(1) * 255];
+  }
+  function hex2(n) { n = Math.round(Math.max(0, Math.min(255, n))); return (n < 16 ? '0' : '') + n.toString(16); }
+  function rgbToHex(c) { return '#' + hex2(c[0]) + hex2(c[1]) + hex2(c[2]); }
+  function hexToHsv(hex) {
+    var n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+    if (d) {
+      if (mx === r) h = ((g - b) / d + 6) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return { h: h, s: mx ? d / mx : 0, v: mx };
+  }
+  function wheelHex() { return rgbToHex(hsvToRgb(wheel.h, wheel.s, wheel.v)); }
 
   /** Цвет вида сейчас: свой, затем общий; '' — натуральный. */
   function tintOf(id) {
@@ -198,45 +217,99 @@
 
   function applyTints() { Pal.setOverrides(Pal.tintsFrom(settings)); }
 
-  function markTint() {
-    var cur = tintOf(settings.species), bs = $('tint-swatches').querySelectorAll('.swatch');
-    for (var i = 0; i < bs.length; i++) {
-      var c = bs[i].dataset.color;
-      bs[i].setAttribute('aria-checked', (c === 'auto' ? !cur : c === cur) ? 'true' : 'false');
+  function drawWheel() {
+    var cv = $('wheel'), S = cv.width, ctx = cv.getContext('2d'), R = S / 2 - 3, i, j;
+    var img = ctx.createImageData(S, S), d = img.data;
+    for (j = 0; j < S; j++) {
+      for (i = 0; i < S; i++) {
+        var dx = i + 0.5 - S / 2, dy = j + 0.5 - S / 2, r = Math.sqrt(dx * dx + dy * dy), o = (j * S + i) * 4;
+        if (r > R + 1) continue;
+        var h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+        var c = hsvToRgb(h, Math.min(1, r / R), wheel.v);
+        d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2];
+        d[o + 3] = Math.max(0, Math.min(255, (R + 1 - r) * 255));      // мягкий край круга
+      }
     }
-    var custom = $('tint-custom');
-    custom.value = cur || '#ffffff';
-    custom.classList.toggle('on', !!cur && TINTS.indexOf(cur) < 0);
-    $('out-tint').textContent = cur || 'natural';
-    $('set-tintAll').checked = !!settings.tintAll;
+    ctx.putImageData(img, 0, 0);
+    if (wheel.on) {
+      // маркер выбранного цвета
+      var a = wheel.h * Math.PI / 180, mx = S / 2 + Math.cos(a) * wheel.s * R, my = S / 2 + Math.sin(a) * wheel.s * R;
+      ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2);
+      ctx.fillStyle = wheelHex(); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(mx, my, 8.6, 0, Math.PI * 2);
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+    }
+    // дорожка ползунка яркости: от чёрного к текущему оттенку
+    var top = hsvToRgb(wheel.h, wheel.s, 1);
+    $('wheel-val').style.setProperty('--to', rgbToHex(top));
   }
 
-  function pickTint(hex) {
+  function markTint() {
+    var cur = tintOf(settings.species);
+    if (cur) {
+      var hsv = hexToHsv(cur);
+      wheel.h = hsv.h; wheel.s = hsv.s; wheel.v = hsv.v; wheel.on = true;
+    } else {
+      wheel.on = false;
+    }
+    $('wheel-val').value = Math.round(wheel.v * 100);
+    $('wheel-hex').value = cur || '';
+    $('out-tint').textContent = cur || 'natural';
+    $('set-tintAll').checked = !!settings.tintAll;
+    drawWheel();
+  }
+
+  /** hex пустой — вернуть натуральный цвет. live — идёт перетаскивание: сохранение откладывается. */
+  function pickTint(hex, live) {
     if ($('set-tintAll').checked) { settings.tintAll = hex; settings.tints = {}; }
-    else if (hex) settings.tints[settings.species] = hex;
-    else settings.tints[settings.species] = '';          // этот вид — натуральным, даже если задан общий цвет
-    if (!hex && $('set-tintAll').checked) settings.tintAll = '';
-    applyTints(); markTint(); save();
+    else settings.tints[settings.species] = hex;             // '' — этот вид натуральным, даже если задан общий
+    applyTints();
+    $('out-tint').textContent = hex || 'natural';
+    $('wheel-hex').value = hex;
+    drawWheel();
+    if (live) { clearTimeout(saveT); saveT = setTimeout(save, 300); } else save();
   }
 
   function buildTints() {
-    var box = $('tint-swatches');
-    function swatch(color, label) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'swatch'; b.setAttribute('role', 'radio'); b.dataset.color = color;
-      b.title = b.ariaLabel = label;
-      b.setAttribute('aria-label', label);
-      if (color === 'auto') b.textContent = 'A'; else b.style.setProperty('--c', color);
-      b.addEventListener('click', function () { pickTint(color === 'auto' ? '' : color); });
-      box.appendChild(b);
+    var cv = $('wheel');
+    function fromPointer(e) {
+      var r = cv.getBoundingClientRect(), S = r.width, x = e.clientX - r.left - S / 2, y = e.clientY - r.top - S / 2;
+      var R = S / 2 - 3 * S / cv.width, dist = Math.sqrt(x * x + y * y);
+      wheel.h = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+      wheel.s = Math.min(1, dist / R);
+      wheel.on = true;
+      pickTint(wheelHex(), true);
     }
-    swatch('auto', 'Natural color');
-    TINTS.forEach(function (c) { swatch(c, c); });
-    var custom = document.createElement('input');
-    custom.type = 'color'; custom.id = 'tint-custom'; custom.className = 'swatch-custom';
-    custom.title = 'Any color'; custom.setAttribute('aria-label', 'Any color');
-    custom.addEventListener('input', function () { pickTint(this.value); });
-    box.appendChild(custom);
+    var dragging = false;
+    cv.addEventListener('pointerdown', function (e) {
+      dragging = true;
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* указатель уже отпущен */ }
+      fromPointer(e);
+      e.preventDefault();
+    });
+    cv.addEventListener('pointermove', function (e) { if (dragging) fromPointer(e); });
+    function end() { if (dragging) { dragging = false; clearTimeout(saveT); save(); } }
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+
+    $('wheel-val').addEventListener('input', function () {
+      wheel.v = this.value / 100;
+      if (!wheel.on) { wheel.on = true; wheel.h = wheel.h || 0; }   // сдвинули яркость — выбор начался
+      pickTint(wheelHex(), true);
+    });
+    $('wheel-hex').addEventListener('change', function () {
+      var v = this.value.trim();
+      if (v && v[0] !== '#') v = '#' + v;
+      if (/^#[0-9a-f]{3}$/i.test(v)) v = '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+      if (!v) { pickTint(''); markTint(); return; }
+      if (!/^#[0-9a-f]{6}$/i.test(v)) { this.value = tintOf(settings.species); return; }
+      var hsv = hexToHsv(v);
+      wheel.h = hsv.h; wheel.s = hsv.s; wheel.v = hsv.v; wheel.on = true;
+      $('wheel-val').value = Math.round(wheel.v * 100);
+      pickTint(v.toLowerCase());
+    });
+    $('wheel-reset').addEventListener('click', function () { pickTint(''); markTint(); });
     $('set-tintAll').addEventListener('change', function () {
       if (this.checked) {
         // общий цвет берём у текущего вида; если у него натуральный — ничего не красим

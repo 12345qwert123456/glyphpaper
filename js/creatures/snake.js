@@ -5,25 +5,37 @@
   'use strict';
 
   // ------------------------------------------------------------ параметры
-  var COUNT = 6;
+  var COUNT = 4;
   var ENV = 'reeds';         // среда вида (см. js/ambient.js)
   var DRIFT = 0.1;           // насколько ветер сносит существо
   var PALETTE = {
     dot: '#5ea244',
     materials: [
-      { role: 'secondary', toward: [105, 0.5], stops: ['#16381f', '#2f6a34', '#5ea244', '#b4dc78'] }, // чешуя
-      { role: 'tertiary', stops: ['#241c10', '#4a3a1c', '#7e6430'] },                                  // узор
+      { role: 'secondary', toward: [100, 0.55], stops: ['#25421a', '#4e8a2c', '#8cc94e', '#d8f08c'] }, // чешуя
+      { role: 'tertiary', stops: ['#120d06', '#2a1f0e', '#4e3a18'] },                                  // ромбы узора
       { role: 'error', stops: ['#6a1616', '#c8322e', '#ff6b5e'] },                                     // язык
       { role: 'on_surface_variant', stops: ['#1f4a48', '#4f9a8f', '#b4e6da'] }   // среда: камыши
     ]
   };
-  var NODES = 14;
-  var LENGTH_CELLS = [12, 22];          // длина, ячеек
-  // полуширина тела по длине, ячеек: голова, шея, самое толстое место, хвост
-  var PROFILE = [0.75, 0.95, 0.8, 0.95, 1.15, 1.3, 1.4, 1.4, 1.3, 1.15, 0.95, 0.7, 0.45, 0.22];
-  var SPEED = [10, 32];                 // px/с
-  var WAVE = 0.62;                      // сдвиг фазы волны между узлами
-  var WAVE_AMP = 1.0;                   // амплитуда волны, ячеек
+  var NODES = 28;
+  var LENGTH_CELLS = [34, 52];          // длина, ячеек
+  var DIAMOND = 5.4;                    // длина одного ромба узора, ячеек
+  var HEAD = 0.13;                      // доля длины, занятая головой
+
+  /** Полуширина тела (ячеек) в точке t = 0..1 вдоль змеи: голова с «челюстью», тонкая шея,
+   *  плавное утолщение к середине и длинный сходящий на нет хвост. */
+  function profile(t) {
+    if (t < 0.05) return 0.55 + 0.4 * (t / 0.05);
+    if (t < HEAD) return 0.95 - 0.5 * U.smooth((t - 0.05) / (HEAD - 0.05));
+    var body = 0.45 + 0.5 * Math.pow(Math.sin(Math.PI * Math.min(1, (t - HEAD) / 0.95)), 0.6);
+    var tail = t > 0.78 ? 1 - Math.pow((t - 0.78) / 0.22, 1.2) * 0.94 : 1;
+    return body * tail;
+  }
+  var SPEED = [18, 42];                 // px/с
+  var SWAY = 1.25;                      // рад — на сколько курс качается вправо-влево: даёт змеиные изгибы
+  var SWAY_HZ = [0.6, 0.9];             // рад/с — частота покачивания курса
+  var WAVE = 0.5;                       // сдвиг фазы мелкой волны между узлами
+  var WAVE_AMP = 0.3;                   // амплитуда мелкой волны, ячеек
   var TONGUE_EVERY = [1.4, 4];          // сек между высовываниями языка
   // ----------------------------------------------------------------------
 
@@ -34,11 +46,12 @@
     Cr.init(this, SPECIES, env, rnd, { depth: k, x: x, y: y });
     this.n = NODES;
     this.len = U.lerp(LENGTH_CELLS[0], LENGTH_CELLS[1], k);
-    this.scale = this.len / 17;
+    this.scale = this.len / 24;
     this.o1 = rnd() * 50;
     this.baseSpeed = rnd.range(SPEED[0], SPEED[1]);
     this.mult = 1; this.mode = 0; this.modeT = rnd.range(2, 8);
-    this.sFreq = rnd.range(0.3, 0.6); this.sPhase = rnd() * U.TAU;
+    this.sFreq = rnd.range(SWAY_HZ[0], SWAY_HZ[1]); this.sPhase = rnd() * U.TAU;
+    this.osc = 0;                         // текущее качание курса
     this.wave = rnd() * U.TAU;
     this.tongueT = rnd.range(0.5, 3); this.tongue = 0;
     this.nx = new Float32Array(NODES); this.ny = new Float32Array(NODES);
@@ -49,11 +62,20 @@
     this.ox = new Float32Array(NODES); this.oy = new Float32Array(NODES);
     this.grabNode = 0;
     this.geom(env);
+    // длинную змею ставим целиком в кадр
+    this.x = U.clamp(this.x, this.radius * 0.6, Math.max(this.radius * 0.6, env.W - this.radius * 0.6));
+    this.y = U.clamp(this.y, this.radius * 0.35, Math.max(this.radius * 0.35, env.H - this.radius * 0.35));
+    // сразу в изгибах: тело раскладывается по следу, который оставила бы голова за прошлые секунды
+    var px = this.x, py = this.y, v0 = this.baseSpeed * this.speedMul;
+    this.base0 = this.heading;
     for (var i = 0; i < NODES; i++) {
-      this.nx[i] = this.x - Math.cos(this.heading) * this.seg * i;
-      this.ny[i] = this.y - Math.sin(this.heading) * this.seg * i;
-      this.dx[i] = this.nx[i]; this.dy[i] = this.ny[i];
+      this.nx[i] = px; this.ny[i] = py;
+      this.dx[i] = px; this.dy[i] = py;
+      var h = this.base0 + SWAY * Math.sin((this.t - i * this.seg / Math.max(8, v0)) * this.sFreq + this.sPhase);
+      px -= Math.cos(h) * this.seg; py -= Math.sin(h) * this.seg;
     }
+    this.heading = this.base0 + SWAY * Math.sin(this.t * this.sFreq + this.sPhase);
+    this.osc = SWAY * Math.sin(this.t * this.sFreq + this.sPhase);
   }
 
   Snake.prototype.geom = function (env) {
@@ -61,7 +83,7 @@
     this.cell = cell;
     this.seg = this.len * cell / (NODES - 1);
     this.segCells = this.seg / cell;
-    for (var i = 0; i < NODES; i++) this.r[i] = PROFILE[i] * this.scale * cell;
+    for (var i = 0; i < NODES; i++) this.r[i] = profile(i / (NODES - 1)) * this.scale * cell;
     this.radius = this.len * cell * 0.6;
   };
 
@@ -78,9 +100,11 @@
       this.physics(dt, env);
       v = this.baseSpeed * this.speedMul * (this.held ? 2.6 : 1.5);
     } else {
-      // ползёт змейкой: поворот качается вправо-влево, плюс шум
-      var w = 0.9 * Math.sin(this.t * this.sFreq + this.sPhase) + (U.noise1(this.t * 0.3, this.seed) - 0.5) * 0.8;
-      this.heading += U.clamp(w, -1.3, 1.3) * dt;
+      // ползёт змейкой: курс медленно блуждает и качается вправо-влево — тело, идущее по
+      // следу головы, само складывается в S-образные изгибы
+      var base = this.heading - this.osc + (U.noise1(this.t * 0.2, this.seed) - 0.5) * 0.9 * dt;
+      this.osc = SWAY * Math.sin(this.t * this.sFreq + this.sPhase) * Math.min(1, this.mult * 1.2);
+      this.heading = base + this.osc;
       // ползёт, потом замирает и пробует воздух
       this.modeT -= dt;
       if (this.modeT <= 0) {
@@ -104,14 +128,14 @@
     }
 
     // волна ползёт от головы к хвосту
-    this.wave += (2.8 + v * 0.16) * dt;
-    var amp = this.cell * this.scale * WAVE_AMP * (0.4 + 0.6 * Math.min(1, v / 12));
+    this.wave += (2.4 + v * 0.1) * dt;
+    var amp = this.cell * WAVE_AMP * (0.4 + 0.6 * Math.min(1, v / 12));
     if (!free) amp *= 0.55;
     for (i = 0; i < NODES; i++) {
       var p = i === 0 ? 1 : i;
       var tx = this.nx[p - 1] - this.nx[p], ty = this.ny[p - 1] - this.ny[p];
       var tl = Math.sqrt(tx * tx + ty * ty) || 1;
-      var off = amp * (0.3 + 0.7 * i / (NODES - 1)) * Math.sin(this.wave - i * WAVE);
+      var off = amp * Math.sin(this.wave - i * WAVE);
       this.dx[i] = this.nx[i] - ty / tl * off;
       this.dy[i] = this.ny[i] + tx / tl * off;
     }
@@ -125,6 +149,7 @@
       this.ex[i] = this.dx[i + 1] - this.dx[i]; this.ey[i] = this.dy[i + 1] - this.dy[i];
       this.il[i] = 1 / (this.ex[i] * this.ex[i] + this.ey[i] * this.ey[i] || 1);
     }
+    this.buildOcc();
     this.hx = this.dx[NODES >> 1]; this.hy = this.dy[NODES >> 1];       // середина тела — для подсветки сетки
 
     // язык высовывается и дрожит
@@ -161,6 +186,7 @@
   };
 
   Snake.prototype.sample = function (x, y) {
+    if (!this.occHit(x, y)) return 0;
     var best = 2, bi = -1, bt = 0, side = 1, brr = 1, i, px, py, t, qx, qy, rr, q;
     for (i = 0; i < NODES - 1; i++) {
       px = x - this.dx[i]; py = y - this.dy[i];
@@ -178,14 +204,14 @@
     var uu = (bi + bt) * this.segCells, lat = Math.sqrt(best), vv = side * lat * brr / this.cell;
     R.u = uu; R.v = vv + 32;
     // глаза: тёмные точки по бокам головы
-    if (bi === 0 && bt > 0.2 && bt < 0.65 && lat > 0.4 && lat < 0.9) { R.m = 1; return 0.06; }
-    var core = 1 - best, shade = lat > 0.85 ? -0.1 : 0;
-    if (uu < 1.6) { R.m = 0; return 0.62 + 0.25 * core + shade; }     // голова без узора
-    // косые полосы, расходящиеся от хребта
-    var ph = uu * 0.55 + Math.abs(vv) * 0.5 + this.o1;
-    if (ph - Math.floor(ph) < 0.36 && lat > 0.22) { R.m = 1; return 0.42 + 0.3 * core + shade; }
+    if (uu > 0.045 * this.len && uu < 0.075 * this.len && lat > 0.4 && lat < 0.9) { R.m = 1; return 0.06; }
+    var core = 1 - best;
+    if (uu < HEAD * this.len) { R.m = 0; return 0.74 + 0.2 * core - (lat > 0.85 ? 0.14 : 0); }      // голова светлее и без узора
+    // тёмные ромбы по спине: вдоль тела чередуются ромб и светлый промежуток
+    var f = uu / DIAMOND - Math.floor(uu / DIAMOND), tri = 1 - Math.abs(2 * f - 1);
+    if (lat < tri * 0.95 && tri > 0.22) { R.m = 1; return 0.2 + 0.18 * core; }
     R.m = 0;
-    return 0.5 + 0.35 * core + shade + (lat < 0.2 ? 0.08 : 0);       // светлая спинная линия
+    return 0.62 + 0.3 * core - (lat > 0.88 ? 0.12 : 0);
   };
 
   Snake.prototype.strokes = function (add) {

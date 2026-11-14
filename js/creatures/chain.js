@@ -139,6 +139,40 @@
       };
 
 
+      /** Маска занятых ячеек вокруг узлов: sample() сразу отбрасывает пустые места, а не
+       *  перебирает все звенья. Строится в конце update(); this.occPad — запас вокруг узла. */
+      P.buildOcc = function () {
+        var n = this.n, step = this.cell * 0.9, pad = this.occPad == null ? this.cell * 1.5 : this.occPad;
+        var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, i;
+        for (i = 0; i < n; i++) {
+          var R = this.r[i] + pad;
+          if (this.dx[i] - R < x0) x0 = this.dx[i] - R; if (this.dx[i] + R > x1) x1 = this.dx[i] + R;
+          if (this.dy[i] - R < y0) y0 = this.dy[i] - R; if (this.dy[i] + R > y1) y1 = this.dy[i] + R;
+        }
+        var w = Math.ceil((x1 - x0) / step) + 1, h = Math.ceil((y1 - y0) / step) + 1;
+        if (!this.occ || this.occ.length < w * h) this.occ = new Uint8Array(w * h);
+        else this.occ.fill(0, 0, w * h);
+        this.occX = x0; this.occY = y0; this.occW = w; this.occH = h; this.occStep = step;
+        for (i = 0; i < n; i++) {
+          var Ri = this.r[i] + pad, cx = this.dx[i], cy = this.dy[i];
+          var ia = Math.max(0, Math.floor((cx - Ri - x0) / step)), ib = Math.min(w - 1, Math.floor((cx + Ri - x0) / step));
+          var ja = Math.max(0, Math.floor((cy - Ri - y0) / step)), jb = Math.min(h - 1, Math.floor((cy + Ri - y0) / step));
+          for (var j = ja; j <= jb; j++) {
+            var py = y0 + (j + 0.5) * step - cy;
+            for (var ii = ia; ii <= ib; ii++) {
+              var px = x0 + (ii + 0.5) * step - cx;
+              if (px * px + py * py < (Ri + step) * (Ri + step)) this.occ[j * w + ii] = 1;
+            }
+          }
+        }
+      };
+
+      /** true, если точка может попасть в тело (иначе sample() можно не считать). */
+      P.occHit = function (x, y) {
+        var i = Math.floor((x - this.occX) / this.occStep), j = Math.floor((y - this.occY) / this.occStep);
+        return i >= 0 && j >= 0 && i < this.occW && j < this.occH && this.occ[j * this.occW + i] === 1;
+      };
+
       /** Хват за ближайший узел; extra(x, y) может вернуть узел для особых частей тела. */
       P.onGrab = function (x, y) {
         var best = 1e12, g = 0, i;

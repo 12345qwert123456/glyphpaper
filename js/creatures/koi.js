@@ -79,6 +79,7 @@
     this.finLen = FIN_CELLS * this.scale * cell;
     this.finR = 0.6 * this.scale * cell;
     this.radius = this.len * cell * 0.62;
+    this.occPad = Math.max(this.finLen + this.r[3] * 0.5, this.tailLen) + cell;   // плавники и хвост выходят за узлы
   };
 
   Koi.prototype.onScare = function () {
@@ -174,6 +175,7 @@
       this.ex[i] = this.dx[i + 1] - this.dx[i]; this.ey[i] = this.dy[i + 1] - this.dy[i];
       this.il[i] = 1 / (this.ex[i] * this.ex[i] + this.ey[i] * this.ey[i] || 1);
     }
+    this.buildOcc();
 
     // хвостовой плавник: веер за последним узлом, качается вместе с волной
     var L = NODES - 2;
@@ -233,6 +235,7 @@
   };
 
   Koi.prototype.sample = function (x, y) {
+    if (!this.occHit(x, y)) return 0;
     var best = 2, bi = -1, bt = 0, side = 1, brr = 1, i, px, py, t, qx, qy, rr, q;
     for (i = 0; i < NODES - 1; i++) {
       px = x - this.dx[i]; py = y - this.dy[i];

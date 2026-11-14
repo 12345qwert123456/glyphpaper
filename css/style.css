@@ -183,40 +183,27 @@ button:disabled { cursor: default; }
 .toggle input { width: 15px; height: 15px; margin: 0; accent-color: rgba(var(--ui-text), 0.85); cursor: pointer; }
 .toggle span { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
 
-.swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.swatch {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 50%;
-  border: 1.5px solid rgba(var(--ui-text), 0.2);
-  background: var(--c, transparent);
-  color: rgba(var(--ui-text), 0.65);
-  font-size: 10px;
-  font-weight: 600;
-  display: grid;
-  place-items: center;
-  transition: transform 120ms ease;
-}
-.swatch:hover { transform: scale(1.12); }
-.swatch[aria-checked="true"], .swatch-custom.on { outline: 1.5px solid rgb(var(--ui-text)); outline-offset: 2px; }
-.swatch-custom {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1.5px solid rgba(var(--ui-text), 0.2);
-  border-radius: 50%;
-  background: conic-gradient(#f55, #fc5, #5f8, #5cf, #a6f, #f5a, #f55);
+.wheel-box { display: flex; gap: 14px; align-items: center; }
+.wheel { width: 132px; height: 132px; flex: none; touch-action: none; cursor: crosshair; border-radius: 50%; }
+.wheel-side { flex: 1; min-width: 0; display: grid; gap: 9px; }
+.wheel-side .mini { display: grid; gap: 4px; font-size: 11px; color: rgba(var(--ui-text), 0.5); }
+.wheel-side input[type="text"] { height: 28px; font-family: var(--font-mono); font-size: 12px; }
+.wheel-val {
   -webkit-appearance: none;
   appearance: none;
-  cursor: pointer;
-  overflow: hidden;
+  height: 12px !important;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #000, var(--to, #fff));
+  border: 1px solid rgba(var(--ui-text), 0.15);
 }
-.swatch-custom::-webkit-color-swatch-wrapper { padding: 0; }
-.swatch-custom::-webkit-color-swatch { border: 0; border-radius: 50%; opacity: 0; }
-.swatch-custom::-moz-color-swatch { border: 0; opacity: 0; }
-.swatch-custom.on::-webkit-color-swatch { opacity: 1; }
-.swatch-custom.on::-moz-color-swatch { opacity: 1; }
+.wheel-val::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 2px solid rgba(0, 0, 0, 0.45);
+}
+.wheel-val::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0, 0, 0, 0.45); }
+.wheel-val::-moz-range-track { background: transparent; }
+.reset.small { height: 28px; margin-top: 0; font-size: 12px; }
 
 .segmented {
   display: grid;
