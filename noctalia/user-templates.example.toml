@@ -1,0 +1,19 @@
+# Glyph Pond: палитра Noctalia → ~/.cache/glyph-pond/palette.json
+#
+# Добавьте ОДИН из блоков ниже в свой user-templates.toml
+# (обычно ~/.config/noctalia/user-templates.toml) и поправьте путь к шаблону.
+#
+# ВНИМАНИЕ: синтаксис зависит от версии Noctalia и здесь не проверен на живой
+# установке. Сверьтесь с документацией своей версии и с выводом
+#   noctalia theme --list-templates
+
+# --- вариант A: шаблоны вида [templates.<имя>] ----------------------------
+[templates.glyph-pond]
+input_path = "~/src/glyph-pond/noctalia/palette.json.template"
+output_path = "~/.cache/glyph-pond/palette.json"
+# post_hook не нужен: сервер и окно обоев сами следят за файлом
+
+# --- вариант B: Noctalia v5, шаблоны вида [theme.templates.user.<имя>] ----
+# [theme.templates.user.glyph-pond]
+# input_path = "~/src/glyph-pond/noctalia/palette.json.template"
+# output_path = "~/.cache/glyph-pond/palette.json"

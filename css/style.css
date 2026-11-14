@@ -1,0 +1,316 @@
+/* Glyph Pond — интерфейс поверх сцены.
+   Цвета приходят из js/palette.js через переменные --scene-bg, --ui-surface, --ui-text. */
+
+:root {
+  --scene-bg: #0b0d13;
+  --ui-surface: 14, 16, 24;
+  --ui-text: 255, 255, 255;
+  --font-ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--scene-bg);
+  color: rgb(var(--ui-text));
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+
+:focus-visible { outline: 1.5px solid rgba(var(--ui-text), 0.55); outline-offset: 2px; }
+
+/* ------------------------------------------------- верхняя панель-переключатель */
+
+.pill {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 3px;
+  max-width: calc(100vw - 112px);
+  border-radius: 16px;
+  background: rgba(var(--ui-surface), 0.72);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+  overflow-x: auto;
+  scrollbar-width: none;
+  z-index: 3;
+}
+.pill::-webkit-scrollbar { display: none; }
+
+.pill button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(var(--ui-text), 0.55);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.pill button:hover { background: rgba(var(--ui-text), 0.07); color: rgba(var(--ui-text), 0.88); }
+.pill button[aria-pressed="true"] { background: rgba(var(--ui-text), 0.14); color: rgb(var(--ui-text)); }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+/* ------------------------------------------------------------- настройки */
+
+.round {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(var(--ui-surface), 0.72);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+  color: rgba(var(--ui-text), 0.6);
+  transition: background-color 120ms ease, color 120ms ease;
+  z-index: 4;
+}
+.round:hover, .round[aria-expanded="true"] { color: rgb(var(--ui-text)); background: rgba(var(--ui-surface), 0.9); }
+
+.panel {
+  position: fixed;
+  top: 62px;
+  right: 20px;
+  width: 284px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 82px);
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  border-radius: 16px;
+  background: rgba(var(--ui-surface), 0.93);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+  font-size: 12.5px;
+  z-index: 4;
+}
+.panel[hidden] { display: none; }
+
+.field { display: grid; gap: 7px; }
+.field > span { display: flex; justify-content: space-between; align-items: baseline; color: rgba(var(--ui-text), 0.6); }
+.field output { color: rgba(var(--ui-text), 0.9); font-variant-numeric: tabular-nums; }
+.field small, .toggle small { color: rgba(var(--ui-text), 0.4); font-size: 11px; }
+
+.panel input[type="text"] {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(var(--ui-text), 0.1);
+  background: rgba(var(--ui-text), 0.05);
+  outline: none;
+}
+.panel input[type="text"]:focus { border-color: rgba(var(--ui-text), 0.3); }
+.panel input[type="text"]::placeholder { color: rgba(var(--ui-text), 0.3); }
+
+.panel input[type="range"] {
+  width: 100%;
+  margin: 0;
+  height: 16px;
+  accent-color: rgba(var(--ui-text), 0.85);
+  cursor: pointer;
+}
+
+.toggle { display: flex; align-items: center; gap: 9px; color: rgba(var(--ui-text), 0.85); cursor: pointer; }
+.toggle input { width: 15px; height: 15px; margin: 0; accent-color: rgba(var(--ui-text), 0.85); cursor: pointer; }
+.toggle span { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: rgba(var(--ui-text), 0.05);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+}
+.segmented button {
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(var(--ui-text), 0.55);
+  font-size: 12px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.segmented button:hover { color: rgba(var(--ui-text), 0.9); }
+.segmented button[aria-checked="true"] { background: rgba(var(--ui-text), 0.14); color: rgb(var(--ui-text)); }
+
+/* ------------------------------------------- приветствие и поле ввода */
+
+#center {
+  position: fixed;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
+  width: min(570px, 90vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+#center > * { pointer-events: auto; }
+
+.moon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(180deg, #cfd3da 0%, #8a8f99 52%, #3a3e47 100%);
+  pointer-events: none !important;
+}
+
+#greeting {
+  margin: 16px 0 22px;
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: 0.005em;
+  line-height: 1.3;
+  text-align: center;
+  color: rgb(var(--ui-text));
+  /* тёмная полупрозрачная подложка: текст читается над существами */
+  padding: 3px 14px;
+  border-radius: 14px;
+  background: rgba(var(--ui-surface), 0.5);
+  pointer-events: none !important;
+}
+
+.search {
+  width: 100%;
+  min-height: 80px;
+  padding: 9px 10px 8px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  border-radius: 16px;
+  background: rgba(var(--ui-surface), 0.8);
+  border: 1px solid rgba(var(--ui-text), 0.08);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.search:focus-within { border-color: rgba(var(--ui-text), 0.2); background: rgba(var(--ui-surface), 0.9); }
+
+.search .row { display: flex; align-items: center; gap: 10px; }
+.search .lens { flex: none; color: rgba(var(--ui-text), 0.5); }
+.search .grow { flex: 1; }
+
+#q {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: rgb(var(--ui-text));
+}
+#q::placeholder { color: rgba(var(--ui-text), 0.45); }
+
+.search .tools { gap: 6px; margin-left: -4px; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px 0 9px;
+  border-radius: 13px;
+  border: 1px solid rgba(var(--ui-text), 0.1);
+  background: transparent;
+  color: rgba(var(--ui-text), 0.55);
+  font-size: 12px;
+}
+
+.search .icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(var(--ui-text), 0.5);
+}
+
+.send {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(var(--ui-text), 0.22);
+  color: rgba(var(--ui-text), 0.9);
+  transition: background-color 120ms ease;
+}
+.send:hover { background: rgba(var(--ui-text), 0.36); }
+
+/* ------------------------------------------------------------- подсказка */
+
+#hint {
+  position: fixed;
+  left: 16px;
+  bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgba(var(--ui-text), 0.3);
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+#hint[hidden] { display: none; }
+
+/* ------------------------------------------------------------ адаптивность */
+
+@media (max-width: 720px) {
+  .pill { left: 16px; right: 60px; transform: none; max-width: none; }
+}
+@media (max-height: 420px) {
+  .moon { display: none; }
+  #center { top: 58%; }
+}
+
+/* режим обоев: только сцена */
+body.wallpaper .pill, body.wallpaper .round, body.wallpaper .panel,
+body.wallpaper #center, body.wallpaper #hint { display: none !important; }
+body.wallpaper { cursor: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
