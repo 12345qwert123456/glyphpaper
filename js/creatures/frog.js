@@ -77,7 +77,8 @@
     this.t += dt;
     var vx = 0, vy = 0;
 
-    if (this.held) { this.state = 0; this.timer = Math.max(this.timer, 0.5); }
+    var busy = this.held || this.thrown;       // в руке или в полёте после броска
+    if (busy) { this.state = 0; this.timer = Math.max(this.timer, 0.5); this.target = this.heading; }
     if (this.state === 0) {
       this.timer -= dt;
       this.turnT -= dt;
@@ -86,11 +87,11 @@
         this.target = this.heading + this.rnd.range(-0.9, 0.9);
       }
       this.heading = U.turnToward(this.heading, this.target, 5 * dt);
-      if (this.held) { /* ждёт, пока отпустят */ }
+      if (busy) { /* ждёт, пока отпустят и перестанет кувыркаться */ }
       else if (this.excite > 0.35 && env.mouse.active) this.plan(env, this.x - env.mouse.x, this.y - env.mouse.y);
       else if (this.timer <= 0) this.plan(env);
       // в руке лапы свисают
-      this.ext += ((this.held ? 0.8 : 0) - this.ext) * Math.min(1, dt * 10);
+      this.ext += ((busy ? 0.8 : 0) - this.ext) * Math.min(1, dt * 10);
       this.height = 0;
     } else if (this.state === 1) {
       this.timer -= dt;

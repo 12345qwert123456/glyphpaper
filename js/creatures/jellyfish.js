@@ -78,13 +78,16 @@
     this.v *= Math.exp(-DRAG * dt);
 
     var want = (U.noise1(this.t * 0.12, this.seed) - 0.5) * 0.9;
-    this.tilt += (want - this.tilt) * Math.min(1, dt * 0.8);
+    var free = !this.held && !this.thrown;
+    if (free) this.tilt += (U.angDiff(this.tilt, want)) * Math.min(1, dt * 0.8);   // сама выравнивается куполом вверх
+    this.heading = this.tilt;             // ориентация тела для перетаскивания и броска
     var ux = Math.sin(this.tilt), uy = -Math.cos(this.tilt);        // ось «вверх»
     this.rx = Math.cos(this.tilt); this.ry = Math.sin(this.tilt);   // ось «вправо»
     this.dnx = -ux; this.dny = -uy;                                 // ось «вниз»
     var drift = (U.noise1(this.t * 0.07, this.seed + 9) - 0.5) * 2 * DRIFT;
 
     Cr.move(this, dt, env, ux * this.v + drift, uy * this.v + SINK * this.sink * this.speedMul);
+    if (!free) this.tilt = this.heading;
 
     this.domeRx = this.R0 * (1 - 0.2 * this.c);
     this.domeRy = this.R0 * 0.88 * (1 + 0.2 * this.c);

@@ -54,7 +54,9 @@
     this.t += dt;
     var speed = this.baseSpeed * this.speedMul;
 
-    if (this.leader && this.leader.species === SPECIES && env.list.indexOf(this.leader) >= 0) {
+    if (this.held || this.thrown) {
+      // в руке и в полёте после броска собой не управляет
+    } else if (this.leader && this.leader.species === SPECIES && env.list.indexOf(this.leader) >= 0) {
       // место в клине позади и сбоку от ведущего
       var L = this.leader, a = WEDGE_ANGLE * Math.PI / 180;
       var back = this.row * WEDGE_SPACING * this.cell * Math.cos(a);

@@ -59,7 +59,7 @@
     this.t += dt;
     var vx = 0, vy = 0;
 
-    if (this.held) { this.state = 0; this.timer = Math.max(this.timer, 0.4); }
+    if (this.held || this.thrown) { this.state = 0; this.timer = Math.max(this.timer, 0.4); }
     if (this.state === 0) {
       // зависает с дрожанием; перед броском быстро разворачивается
       this.timer -= dt * (1 + 1.5 * this.excite);

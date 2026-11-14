@@ -32,7 +32,7 @@
   var WAVE = 0.72;                      // сдвиг фазы волны между узлами
   // ----------------------------------------------------------------------
 
-  var U = GP.util, R = GP.Raster, Cr = GP.Creature;
+  var U = GP.util, R = GP.Raster, Cr = GP.Creature, CFG = GP.config;
   var cursor = (Math.random() * VARIANTS.length) | 0;
 
   function Koi(env, rnd, x, y) {
@@ -57,6 +57,9 @@
     this.dx = new Float32Array(NODES); this.dy = new Float32Array(NODES);   // с волной
     this.r = new Float32Array(NODES);
     this.ex = new Float32Array(NODES); this.ey = new Float32Array(NODES); this.il = new Float32Array(NODES);
+    this.vx = new Float32Array(NODES); this.vy = new Float32Array(NODES);   // скорости узлов (в руке и в броске)
+    this.ox = new Float32Array(NODES); this.oy = new Float32Array(NODES);
+    this.grabNode = 0;
     this.fin = [0, 0, 0, 0, 0, 0, 0, 0];
     this.geom(env);
     for (var i = 0; i < NODES; i++) {
@@ -86,54 +89,146 @@
     GP.Ambient.ripple(this.x, this.y, 5);            // всплеск на воде
   };
 
+  /** Рыбу берут за ближайший узел: за голову, середину или хвост. */
+  Koi.prototype.onGrab = function (x, y) {
+    var best = 1e12, g = 0, i;
+    for (i = 0; i < NODES; i++) {
+      var dx = x - this.dx[i], dy = y - this.dy[i], d = dx * dx + dy * dy;
+      if (d < best) { best = d; g = i; }
+    }
+    // хвостовой плавник — тоже хвост
+    var tx = x - (this.dx[NODES - 1] + this.tcos * this.tailLen * 0.6), ty = y - (this.dy[NODES - 1] + this.tsin * this.tailLen * 0.6);
+    if (tx * tx + ty * ty < best) g = NODES - 1;
+    this.grabNode = g;
+    this.grabbed = { node: g };
+    for (i = 0; i < NODES; i++) { this.vx[i] = this.vy[i] = 0; }
+  };
+
+  Koi.prototype.onRelease = function (hvx, hvy) {
+    // узел, за который держали, уходит со скоростью руки и тянет за собой тело
+    var sp = Math.sqrt(hvx * hvx + hvy * hvy), g = this.grabNode;
+    if (sp > CFG.THROW_MAX) { hvx *= CFG.THROW_MAX / sp; hvy *= CFG.THROW_MAX / sp; }
+    this.vx[g] = hvx; this.vy[g] = hvy;
+    // запас скорости броска: по нему возвращается управление (своё плавание в него не входит)
+    var sum = 0;
+    for (var i = 0; i < NODES; i++) sum += Math.sqrt(this.vx[i] * this.vx[i] + this.vy[i] * this.vy[i]);
+    this.throwV = sum / NODES;
+    this.grabbed = null;
+    this.thrown = true;
+  };
+
+  /** Цепочка с инерцией: узлы летят сами, звенья держат длину, тело упруго
+   *  распрямляется. В руке рыба бьётся и тянет головой вперёд. */
+  Koi.prototype.physics = function (dt, env) {
+    if (dt <= 0) return;
+    var n = NODES, i, it, g = this.held ? this.grabNode : -1;
+    var damp = Math.exp(-(this.held ? CFG.HOLD_DRAG : CFG.THROW_DAMP_WATER) * dt);
+    var sum = 0;
+    for (i = 0; i < n; i++) {
+      this.ox[i] = this.nx[i]; this.oy[i] = this.ny[i];
+      this.vx[i] *= damp; this.vy[i] *= damp;
+      sum += Math.sqrt(this.vx[i] * this.vx[i] + this.vy[i] * this.vy[i]);
+      this.nx[i] += this.vx[i] * dt; this.ny[i] += this.vy[i] * dt;
+    }
+    var speed = this.held ? sum / n : (this.throwV *= damp);
+    // собственное усилие: в руке вырывается, в полёте возвращает управление по мере остановки
+    var ctrl = this.held ? 1 : 1 - U.clamp(speed / 260, 0, 1);
+    var hx = this.nx[0] - this.nx[1], hy = this.ny[0] - this.ny[1], hl = Math.sqrt(hx * hx + hy * hy) || 1;
+    var swim = this.baseSpeed * this.speedMul * (this.held ? 2.4 : 1) * ctrl * dt;
+    var wig = Math.sin(this.wave * 1.3) * 0.9;
+    if (g !== 0) {
+      this.nx[0] += (hx / hl - hy / hl * wig) * swim;
+      this.ny[0] += (hy / hl + hx / hl * wig) * swim;
+    }
+    if (g >= 0 && g !== n - 1) {            // хвост бьёт в противофазе
+      this.nx[n - 1] += hy / hl * wig * swim * 0.8;
+      this.ny[n - 1] -= hx / hl * wig * swim * 0.8;
+    }
+    for (it = 0; it < 4; it++) {
+      if (g >= 0) { this.nx[g] = this.held.x; this.ny[g] = this.held.y; }
+      for (i = 1; i < n; i++) {
+        var dx = this.nx[i] - this.nx[i - 1], dy = this.ny[i] - this.ny[i - 1];
+        var d = Math.sqrt(dx * dx + dy * dy) || 1, diff = (d - this.seg) / d;
+        var wa = i - 1 === g ? 0 : 0.5, wb = i === g ? 0 : 0.5, ws = wa + wb;
+        this.nx[i - 1] += dx * diff * wa / ws; this.ny[i - 1] += dy * diff * wa / ws;
+        this.nx[i] -= dx * diff * wb / ws; this.ny[i] -= dy * diff * wb / ws;
+      }
+      // упругость хребта: тело не складывается гармошкой
+      for (i = 1; i < n - 1; i++) {
+        if (i === g) continue;
+        this.nx[i] += ((this.nx[i - 1] + this.nx[i + 1]) / 2 - this.nx[i]) * 0.1;
+        this.ny[i] += ((this.ny[i - 1] + this.ny[i + 1]) / 2 - this.ny[i]) * 0.1;
+      }
+    }
+    for (i = 0; i < n; i++) {
+      this.vx[i] = U.clamp((this.nx[i] - this.ox[i]) / dt, -2600, 2600);
+      this.vy[i] = U.clamp((this.ny[i] - this.oy[i]) / dt, -2600, 2600);
+    }
+    this.x = this.nx[0]; this.y = this.ny[0];
+    this.heading = Math.atan2(this.ny[0] - this.ny[1], this.nx[0] - this.nx[1]);
+    this.pushX = this.pushY = 0;
+    this.excite = Math.max(this.excite * Math.exp(-1.1 * dt), this.held ? 0.85 : 1 - ctrl);
+    if (!this.held) {
+      if (speed < 22) this.thrown = false;      // успокоилась — плывёт дальше сама
+      Cr.wrap(this, env);
+    }
+  };
+
   Koi.prototype.update = function (dt, env) {
     if (env.cell !== this.cell) this.geom(env);
     this.t += dt;
     var i;
 
-    // плавные повороты по S-кривым + шум
-    var w = 0.5 * Math.sin(this.t * this.sFreq + this.sPhase) + (U.noise1(this.t * 0.25, this.seed) - 0.5) * 0.9;
-    var diag = Math.PI / 4 + Math.round((this.heading - Math.PI / 4) / (Math.PI / 2)) * Math.PI / 2;
-    w += U.angDiff(this.heading, diag) * 0.12;
+    var v;
+    if (this.held || this.thrown) {
+      // в руке и после броска тело — физическая цепочка, а не «голова ведёт»
+      this.physics(dt, env);
+      v = this.baseSpeed * this.speedMul * (this.held ? 2.6 : 1.5);
+    } else {
+      // плавные повороты по S-кривым + шум
+      var w = 0.5 * Math.sin(this.t * this.sFreq + this.sPhase) + (U.noise1(this.t * 0.25, this.seed) - 0.5) * 0.9;
+      var diag = Math.PI / 4 + Math.round((this.heading - Math.PI / 4) / (Math.PI / 2)) * Math.PI / 2;
+      w += U.angDiff(this.heading, diag) * 0.12;
 
-    // лёгкая стайность: выравнивание и слабое притяжение к соседям
-    var list = env.list, ax = 0, ay = 0, cx = 0, cy = 0, cnt = 0;
-    for (i = 0; i < list.length; i++) {
-      var o = list[i];
-      if (o === this || o.species !== SPECIES) continue;
-      var ox = o.x - this.x, oy = o.y - this.y;
-      if (ox * ox + oy * oy < SCHOOL_RADIUS * SCHOOL_RADIUS) {
-        ax += Math.cos(o.heading); ay += Math.sin(o.heading); cx += ox; cy += oy; cnt++;
+      // лёгкая стайность: выравнивание и слабое притяжение к соседям
+      var list = env.list, ax = 0, ay = 0, cx = 0, cy = 0, cnt = 0;
+      for (i = 0; i < list.length; i++) {
+        var o = list[i];
+        if (o === this || o.species !== SPECIES) continue;
+        var ox = o.x - this.x, oy = o.y - this.y;
+        if (ox * ox + oy * oy < SCHOOL_RADIUS * SCHOOL_RADIUS) {
+          ax += Math.cos(o.heading); ay += Math.sin(o.heading); cx += ox; cy += oy; cnt++;
+        }
       }
-    }
-    if (cnt) {
-      w += U.angDiff(this.heading, Math.atan2(ay, ax)) * 0.28;
-      cx /= cnt; cy /= cnt;
-      if (cx * cx + cy * cy > 90 * 90) w += U.angDiff(this.heading, Math.atan2(cy, cx)) * 0.07;
-    }
-    this.heading += U.clamp(w, -1.2, 1.2) * dt;
+      if (cnt) {
+        w += U.angDiff(this.heading, Math.atan2(ay, ax)) * 0.28;
+        cx /= cnt; cy /= cnt;
+        if (cx * cx + cy * cy > 90 * 90) w += U.angDiff(this.heading, Math.atan2(cy, cx)) * 0.07;
+      }
+      this.heading += U.clamp(w, -1.2, 1.2) * dt;
 
-    // иногда замедление и рывок
-    this.modeT -= dt;
-    if (this.mode === 0 && this.modeT <= 0) { this.mode = 1; this.modeT = this.rnd.range(0.8, 1.7); }
-    else if (this.mode === 1 && this.modeT <= 0) {
-      this.mode = 2; this.mult = 2.3; this.modeT = 1.5;
-      GP.Ambient.ripple(this.x, this.y, 4);
-    }
-    else if (this.mode === 2 && this.modeT <= 0) { this.mode = 0; this.modeT = this.rnd.range(5, 14); }
-    var target = this.mode === 1 ? 0.45 : 1;
-    this.mult += (target - this.mult) * Math.min(1, dt * (this.mode === 2 ? 1.5 : 2.5));
+      // иногда замедление и рывок
+      this.modeT -= dt;
+      if (this.mode === 0 && this.modeT <= 0) { this.mode = 1; this.modeT = this.rnd.range(0.8, 1.7); }
+      else if (this.mode === 1 && this.modeT <= 0) {
+        this.mode = 2; this.mult = 2.3; this.modeT = 1.5;
+        GP.Ambient.ripple(this.x, this.y, 4);
+      }
+      else if (this.mode === 2 && this.modeT <= 0) { this.mode = 0; this.modeT = this.rnd.range(5, 14); }
+      var target = this.mode === 1 ? 0.45 : 1;
+      this.mult += (target - this.mult) * Math.min(1, dt * (this.mode === 2 ? 1.5 : 2.5));
 
-    var v = this.baseSpeed * this.speedMul * this.mult;
-    Cr.move(this, dt, env, Math.cos(this.heading) * v, Math.sin(this.heading) * v);
+      v = this.baseSpeed * this.speedMul * this.mult;
+      Cr.move(this, dt, env, Math.cos(this.heading) * v, Math.sin(this.heading) * v);
 
-    // голова ведёт, остальные узлы следуют с запаздыванием
-    this.nx[0] = this.x; this.ny[0] = this.y;
-    for (i = 1; i < NODES; i++) {
-      var ddx = this.nx[i] - this.nx[i - 1], ddy = this.ny[i] - this.ny[i - 1];
-      var d = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
-      this.nx[i] = this.nx[i - 1] + ddx / d * this.seg;
-      this.ny[i] = this.ny[i - 1] + ddy / d * this.seg;
+      // голова ведёт, остальные узлы следуют с запаздыванием
+      this.nx[0] = this.x; this.ny[0] = this.y;
+      for (i = 1; i < NODES; i++) {
+        var ddx = this.nx[i] - this.nx[i - 1], ddy = this.ny[i] - this.ny[i - 1];
+        var d = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+        this.nx[i] = this.nx[i - 1] + ddx / d * this.seg;
+        this.ny[i] = this.ny[i - 1] + ddy / d * this.seg;
+      }
     }
 
     // волна по телу, амплитуда растёт к хвосту

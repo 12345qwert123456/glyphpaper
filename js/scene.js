@@ -262,8 +262,18 @@
 
   // ------------------------------------------------- взять и перетащить
 
-  var held = null, hold = { x: 0, y: 0 }, offX = 0, offY = 0;
-  var lastX = 0, lastY = 0, lastT = 0, velX = 0, velY = 0;
+  var held = null, hold = { x: 0, y: 0 };
+  var trail = [];                          // последние положения указателя: по ним считается скорость руки
+
+  function handVelocity() {
+    var now = performance.now(), n = trail.length;
+    if (n < 2 || now - trail[n - 1].t > 90) return [0, 0];     // рука остановилась — броска нет
+    var first = trail[0];
+    for (var i = 0; i < n; i++) { if (now - trail[i].t <= 110) { first = trail[i]; break; } }
+    var lastP = trail[n - 1], dtm = (lastP.t - first.t) / 1000;
+    if (dtm < 0.004) return [0, 0];
+    return [(lastP.x - first.x) / dtm, (lastP.y - first.y) / dtm];
+  }
 
   /** Существо под точкой (верхнее из подходящих) или null. */
   S.pick = function (x, y) {
@@ -277,42 +287,37 @@
     return best;
   };
 
-  /** Зажали указатель: если под ним существо — берём его «в руку». */
+  /** Зажали указатель: если под ним существо — берём его за это место. */
   S.grab = function (x, y) {
     if (opts.wallpaper || opts.paused) return false;
     var c = S.pick(x, y);
     if (!c) return false;
     held = c;
-    offX = c.x - x; offY = c.y - y;
-    hold.x = c.x; hold.y = c.y;
+    hold.x = x; hold.y = y;
+    Cr.grab(c, x, y);
     c.held = hold;
     c.brightFree = c.bright;
     c.bright = Math.min(1.12, c.bright * 1.2);      // в руке чуть ярче — будто ближе
-    lastX = x; lastY = y; lastT = performance.now(); velX = velY = 0;
+    trail.length = 0;
+    trail.push({ t: performance.now(), x: x, y: y });
     env.mouse.active = false;                        // остальные руку не пугаются
     return true;
   };
 
   S.drag = function (x, y) {
     if (!held) return;
-    var now = performance.now(), dt = Math.max(1, now - lastT) / 1000;
-    velX += ((x - lastX) / dt - velX) * 0.35; velY += ((y - lastY) / dt - velY) * 0.35;
-    lastX = x; lastY = y; lastT = now;
-    hold.x = x + offX; hold.y = y + offY;
+    hold.x = x; hold.y = y;
+    trail.push({ t: performance.now(), x: x, y: y });
+    if (trail.length > 12) trail.shift();
   };
 
-  /** Отпустили: существо уплывает дальше, сохраняя движение руки. */
+  /** Отпустили: существо летит дальше со скоростью и закруткой, набранными в руке. */
   S.release = function () {
     if (!held) return;
-    var c = held;
+    var c = held, v = handVelocity();
     held = null;
-    c.held = null;
     c.bright = c.brightFree;
-    if (performance.now() - lastT > 120) velX = velY = 0;     // рука остановилась — броска нет
-    var sp = Math.sqrt(velX * velX + velY * velY);
-    if (sp > CFG.THROW_MAX) { velX *= CFG.THROW_MAX / sp; velY *= CFG.THROW_MAX / sp; sp = CFG.THROW_MAX; }
-    c.pushX = velX * 0.8; c.pushY = velY * 0.8;
-    if (sp > 150 && c.onScare) c.onScare(velX / sp, velY / sp);
+    Cr.release(c, v[0] / opts.speed, v[1] / opts.speed);     // время сцены идёт со своей скоростью
     if (Am.water) Am.ripple(c.x, c.y, 6);
   };
 
@@ -340,12 +345,6 @@
   // ------------------------------------------------------------------ кадр
 
   function step(dt) {
-    if (held) {
-      // взятое существо плавно подтягивается под руку
-      var hk = Math.exp(-5 * dt);
-      offX *= hk; offY *= hk;
-      hold.x = lastX + offX; hold.y = lastY + offY;
-    }
     time += dt; env.time = time;
     var i, j, c;
     for (i = 0; i < list.length; i++) {
