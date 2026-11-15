@@ -1,4 +1,4 @@
-/* Glyph Pond — интерфейс поверх сцены.
+/* glyphpaper — интерфейс поверх сцены.
    Цвета приходят из js/palette.js через переменные --scene-bg, --ui-surface, --ui-text. */
 
 :root {

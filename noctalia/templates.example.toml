@@ -1,8 +1,8 @@
-# Glyph Pond: палитра Noctalia → $XDG_CACHE_HOME/glyph-pond/palette.json
+# glyphpaper: палитра Noctalia → $XDG_CACHE_HOME/glyphpaper/palette.json
 #
 # Сначала скопируйте шаблон:
 #   mkdir -p ~/.config/noctalia/templates
-#   cp noctalia/palette.json.template ~/.config/noctalia/templates/glyph-pond-palette.json
+#   cp noctalia/palette.json.template ~/.config/noctalia/templates/glyphpaper-palette.json
 #
 # Затем добавьте ОДИН из блоков ниже — какой, зависит от версии Noctalia.
 # Проверить, что шаблон подхвачен:  noctalia theme --list-templates
@@ -11,9 +11,9 @@
 
 # --- Noctalia v5: блок в основном конфиге Noctalia -------------------------
 # https://docs.noctalia.dev/noctalia/theming/app-theming/  (раздел User Templates)
-[theme.templates.user.glyph-pond]
-input_path  = "$XDG_CONFIG_HOME/noctalia/templates/glyph-pond-palette.json"
-output_path = "$XDG_CACHE_HOME/glyph-pond/palette.json"
+[theme.templates.user.glyphpaper]
+input_path  = "$XDG_CONFIG_HOME/noctalia/templates/glyphpaper-palette.json"
+output_path = "$XDG_CACHE_HOME/glyphpaper/palette.json"
 
 # --- Noctalia Shell (legacy, v4): файл ~/.config/noctalia/user-templates.toml
 # Включается в Settings → Color Scheme → Templates → Advanced → User templates.
@@ -21,6 +21,6 @@ output_path = "$XDG_CACHE_HOME/glyph-pond/palette.json"
 #
 # [config]
 #
-# [templates.glyph-pond]
-# input_path  = "~/.config/noctalia/templates/glyph-pond-palette.json"
-# output_path = "~/.cache/glyph-pond/palette.json"
+# [templates.glyphpaper]
+# input_path  = "~/.config/noctalia/templates/glyphpaper-palette.json"
+# output_path = "~/.cache/glyphpaper/palette.json"

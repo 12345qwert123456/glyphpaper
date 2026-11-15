@@ -1,6 +1,9 @@
-# Glyph Pond
+# glyphpaper
 
-Живая стартовая страница: тёмный фон, населённый существами из символов клавиатуры.
+*Live wallpaper and new tab page: creatures drawn with keyboard glyphs.*
+Да, посередине у названия «php». Нет, PHP здесь нет: ни одной строки.
+
+Живые обои и стартовая страница: тёмный фон, населённый существами из символов клавиатуры.
 Одна самодостаточная страница на HTML + Canvas 2D — без сборки, без библиотек, без сетевых запросов.
 
 ![Butterfly](docs/butterfly.png)
@@ -271,24 +274,24 @@ wallpaper/              окно живых обоев для Hyprland (GTK3 + W
 python3 tools/palette-server.py --port 8765
 ```
 
-Файл ищется по порядку: путь из `--file`, `~/.cache/glyph-pond/palette.json`,
+Файл ищется по порядку: путь из `--file`, `~/.cache/glyphpaper/palette.json`,
 `~/.cache/wal/colors.json`. Страница опрашивает сервер раз в 3 секунды условным запросом;
 если сервер молчит, она переходит на Natural и спрашивает реже.
 
 Автозапуск — одним из способов:
 
 ```bash
-cp noctalia/glyph-pond-palette.service ~/.config/systemd/user/
+cp noctalia/glyphpaper-palette.service ~/.config/systemd/user/
 ```
 
 ```bash
-systemctl --user enable --now glyph-pond-palette.service
+systemctl --user enable --now glyphpaper-palette.service
 ```
 
 или строкой в `hyprland.conf`:
 
 ```
-exec-once = python3 ~/src/glyph-pond/tools/palette-server.py
+exec-once = python3 ~/src/glyphpaper/tools/palette-server.py
 ```
 
 В файле сервиса и в строке `exec-once` поправьте путь к репозиторию.
@@ -303,15 +306,15 @@ mkdir -p ~/.config/noctalia/templates
 ```
 
 ```bash
-cp noctalia/palette.json.template ~/.config/noctalia/templates/glyph-pond-palette.json
+cp noctalia/palette.json.template ~/.config/noctalia/templates/glyphpaper-palette.json
 ```
 
 Регистрация шаблона зависит от версии — оба варианта лежат в `noctalia/templates.example.toml`:
 
 | Версия | Куда добавить | Блок |
 | --- | --- | --- |
-| Noctalia v5 | основной конфиг Noctalia | `[theme.templates.user.glyph-pond]` |
-| Noctalia Shell (legacy, v4) | `~/.config/noctalia/user-templates.toml`, включается в Settings → Color Scheme → Templates → Advanced | `[templates.glyph-pond]` |
+| Noctalia v5 | основной конфиг Noctalia | `[theme.templates.user.glyphpaper]` |
+| Noctalia Shell (legacy, v4) | `~/.config/noctalia/user-templates.toml`, включается в Settings → Color Scheme → Templates → Advanced | `[templates.glyphpaper]` |
 
 Проверить, что шаблон подхвачен:
 
@@ -332,16 +335,16 @@ noctalia theme --list-templates
 ## Живые обои для Hyprland
 
 Страницу можно показывать как обои рабочего стола. Для этого есть окно-хост
-`wallpaper/glyph-wallpaper.py`: GTK3 + WebKit2GTK на слое `BACKGROUND` (протокол wlr-layer-shell)
+`wallpaper/glyphpaper-wallpaper.py`: GTK3 + WebKit2GTK на слое `BACKGROUND` (протокол wlr-layer-shell)
 на каждом мониторе. Выбор способа: хост рисует ту же страницу, что и в браузере, поэтому
 существа живые, а цвета можно менять на лету; запись видео для `mpvpaper` дала бы повторяющийся
 ролик без живой палитры.
 
 Хост делает три вещи:
 
-- **Палитра с диска.** Читает `~/.cache/glyph-pond/palette.json` (шаблон Noctalia) или pywal-совместимый
+- **Палитра с диска.** Читает `~/.cache/glyphpaper/palette.json` (шаблон Noctalia) или pywal-совместимый
   `~/.cache/wal/colors.json`, следит за файлом и подставляет палитру в страницу через
-  `GlyphPond.setPalette(...)`. Сервер палитры не нужен. Понимает и атомарную замену файла
+  `GlyphPaper.setPalette(...)`. Сервер палитры не нужен. Понимает и атомарную замену файла
   (так пишет Noctalia), недописанный JSON игнорирует.
 - **Автопауза.** Слушает события Hyprland (сокет `.socket2.sock`) и ставит анимацию на паузу, когда
   на всех мониторах активное рабочее место закрыто полноэкранным окном; снимает паузу, когда оно закрыто.
@@ -354,16 +357,16 @@ sudo pacman -S python-gobject gtk3 gtk-layer-shell webkit2gtk-4.1
 ```
 
 ```bash
-python3 wallpaper/glyph-wallpaper.py --creature koi
+python3 wallpaper/glyphpaper-wallpaper.py --creature koi
 ```
 
 Автозапуск — строкой в `hyprland.conf` (путь поправьте):
 
 ```
-exec-once = python3 ~/src/glyph-pond/wallpaper/glyph-wallpaper.py --creature koi
+exec-once = python3 ~/src/glyphpaper/wallpaper/glyphpaper-wallpaper.py --creature koi
 ```
 
-Вместо этого можно использовать пользовательский сервис: `wallpaper/glyph-wallpaper.service`
+Вместо этого можно использовать пользовательский сервис: `wallpaper/glyphpaper-wallpaper.service`
 (там же описано, какие переменные окружения ему нужны).
 
 Полезные параметры:
@@ -400,7 +403,7 @@ Noctalia строит палитру от обоев рабочего стола
 вашей версии Hyprland что-то из этого не так, запустите с `-v` и пришлите вывод.
 
 Параметры страницы можно использовать и без хоста: `index.html?wallpaper=1&creature=koi&fps=24`.
-Внешний интерфейс страницы — `window.GlyphPond`: `setPalette(obj)`, `pause(on)`, `setSpecies(id)`, `stats()`.
+Внешний интерфейс страницы — `window.GlyphPaper`: `setPalette(obj)`, `pause(on)`, `setSpecies(id)`, `stats()`.
 
 ## Приватность
 

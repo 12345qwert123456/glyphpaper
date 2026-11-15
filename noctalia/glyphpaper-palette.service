@@ -1,0 +1,13 @@
+# Пользовательский сервис systemd для сервера палитры.
+#   cp noctalia/glyphpaper-palette.service ~/.config/systemd/user/
+#   (поправьте путь в ExecStart)
+#   systemctl --user enable --now glyphpaper-palette.service
+[Unit]
+Description=glyphpaper palette server (127.0.0.1 only)
+
+[Service]
+ExecStart=/usr/bin/env python3 %h/src/glyphpaper/tools/palette-server.py --port 8765
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

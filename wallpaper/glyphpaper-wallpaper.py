@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Glyph Pond — живые обои для Hyprland (и любого композитора с wlr-layer-shell).
+"""glyphpaper — живые обои для Hyprland (и любого композитора с wlr-layer-shell).
 
 Окно GTK3 + WebKit2GTK рисуется на слое BACKGROUND на каждом мониторе и показывает страницу
 в режиме обоев (?wallpaper=1). Что делает хост:
@@ -12,9 +12,9 @@
     sudo pacman -S python-gobject gtk3 gtk-layer-shell webkit2gtk-4.1
 
 Запуск:
-    python3 wallpaper/glyph-wallpaper.py --creature koi
+    python3 wallpaper/glyphpaper-wallpaper.py --creature koi
 Автозапуск — строкой в hyprland.conf:
-    exec-once = python3 ~/src/glyph-pond/wallpaper/glyph-wallpaper.py --creature koi
+    exec-once = python3 ~/src/glyphpaper/wallpaper/glyphpaper-wallpaper.py --creature koi
 """
 import argparse
 import ctypes.util
@@ -52,14 +52,15 @@ ROOT = Path(__file__).resolve().parent.parent
 CACHE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home() / '.cache')
 DATA = Path(os.environ.get('XDG_DATA_HOME') or Path.home() / '.local' / 'share')
 # палитра ищется по порядку: свой шаблон Noctalia, затем pywal-совместимый файл
-DEFAULT_PALETTES = [CACHE / 'glyph-pond' / 'palette.json', CACHE / 'wal' / 'colors.json']
+DEFAULT_PALETTES = [CACHE / 'glyphpaper' / 'palette.json', CACHE / 'glyph-pond' / 'palette.json',   # второй — прежнее имя
+                    CACHE / 'wal' / 'colors.json']
 # события Hyprland, после которых надо перепроверить, закрыт ли рабочий стол полноэкранным окном
 HYPR_EVENTS = {'fullscreen', 'workspace', 'workspacev2', 'focusedmon', 'focusedmonv2', 'openwindow',
                'closewindow', 'movewindow', 'movewindowv2', 'monitoradded', 'monitorremoved', 'activewindowv2'}
 
 
 def log(*a):
-    print('[glyph-wallpaper]', *a, file=sys.stderr, flush=True)
+    print('[glyphpaper-wallpaper]', *a, file=sys.stderr, flush=True)
 
 
 # ------------------------------------------------------------------ палитра
@@ -134,7 +135,7 @@ class Wallpaper:
         if not args.window and not self.layer:
             log('wlr-layer-shell недоступен (не Wayland-композитор или нет gtk-layer-shell) — '
                 'открываю обычное окно; для отладки используйте --window')
-        data = DATA / 'glyph-pond' / 'wallpaper'
+        data = DATA / 'glyphpaper' / 'wallpaper'
         data.mkdir(parents=True, exist_ok=True)
         manager = WebKit2.WebsiteDataManager(base_data_directory=str(data / 'data'),
                                              base_cache_directory=str(data / 'cache'))
@@ -168,7 +169,7 @@ class Wallpaper:
         if monitor in self.windows:
             return
         win = Gtk.Window()
-        win.set_title('Glyph Pond wallpaper')
+        win.set_title('glyphpaper wallpaper')
         win.set_decorated(False)
         win.set_skip_taskbar_hint(True)
         if self.layer and monitor is not None:
@@ -178,7 +179,7 @@ class Wallpaper:
                 GtkLayerShell.set_anchor(win, edge, True)
             GtkLayerShell.set_exclusive_zone(win, -1)               # не двигаем остальные окна и панели
             GtkLayerShell.set_keyboard_mode(win, GtkLayerShell.KeyboardMode.NONE)
-            GtkLayerShell.set_namespace(win, 'glyph-wallpaper')
+            GtkLayerShell.set_namespace(win, 'glyphpaper-wallpaper')
             GtkLayerShell.set_monitor(win, monitor)
         else:
             win.set_default_size(1280, 720)
@@ -233,7 +234,7 @@ class Wallpaper:
 
     def push(self, view):
         pal = json.dumps(self.palette)
-        self.js(view, 'window.GlyphPond && (GlyphPond.setPalette(%s), GlyphPond.pause(%s));' %
+        self.js(view, 'window.GlyphPaper && (GlyphPaper.setPalette(%s), GlyphPaper.pause(%s));' %
                 (pal, 'true' if self.paused else 'false'))
 
     def set_palette(self, value):
@@ -318,8 +319,8 @@ def probe(app, args):
             Gtk.main_quit()
 
         script = ('JSON.stringify({species: GP.Scene.species(), palette: GP.Palette.active, '
-                  'paused: !!document.hidden, fps: Math.round(GlyphPond.stats().fps), '
-                  'frames: GlyphPond.stats().frames, bg: getComputedStyle(document.documentElement).getPropertyValue("--scene-bg").trim(), wallpaper: document.body.classList.contains("wallpaper"), '
+                  'paused: !!document.hidden, fps: Math.round(GlyphPaper.stats().fps), '
+                  'frames: GlyphPaper.stats().frames, bg: getComputedStyle(document.documentElement).getPropertyValue("--scene-bg").trim(), wallpaper: document.body.classList.contains("wallpaper"), '
                   'ui: !!document.getElementById("center") && getComputedStyle(document.getElementById("center")).display})')
         if args.screenshot:
             snapshot(view, args.screenshot, lambda: app.js(view, script, got))
@@ -331,12 +332,12 @@ def probe(app, args):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='Живые обои Glyph Pond для Hyprland.')
+    ap = argparse.ArgumentParser(description='Живые обои glyphpaper для Hyprland.')
     ap.add_argument('--creature', default='koi', help='вид: butterfly, jellyfish, dragonfly, koi, frog, crane, crab, turtle, ladybug, starfish, spider, snake')
     ap.add_argument('--url', help='адрес страницы (по умолчанию index.html рядом с репозиторием; можно адрес GitHub Pages)')
     ap.add_argument('--fps', type=int, default=30, help='ограничение кадров (по умолчанию 30)')
     ap.add_argument('--set', action='append', metavar='KEY=VALUE', help='параметр страницы: speed=0.6, count=1.4, cell=10, color=natural ...')
-    ap.add_argument('--palette', action='append', metavar='FILE', help='файл палитры (можно несколько); по умолчанию ~/.cache/glyph-pond/palette.json и ~/.cache/wal/colors.json')
+    ap.add_argument('--palette', action='append', metavar='FILE', help='файл палитры (можно несколько); по умолчанию ~/.cache/glyphpaper/palette.json и ~/.cache/wal/colors.json')
     ap.add_argument('--no-palette', action='store_true', help='не читать палитру системы')
     ap.add_argument('--no-pause', action='store_true', help='не ставить на паузу под полноэкранными окнами')
     ap.add_argument('--monitors', default='all', help='all или номер монитора (только вне layer-shell)')

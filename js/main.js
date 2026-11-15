@@ -115,7 +115,7 @@
 
   // Внешний интерфейс: им пользуется окно обоев (палитра читается с диска и
   // передаётся сюда) и отладка.
-  window.GlyphPond = {
+  window.GlyphPaper = {
     setPalette: function (obj) { GP.Palette.setSystem(obj); },
     setSpecies: function (id) { if (GP.UI && GP.UI.select && !document.body.classList.contains('wallpaper')) GP.UI.select(id); else GP.Scene.setSpecies(id); },
     pause: function (on) { GP.Scene.set({ paused: !!on }); },

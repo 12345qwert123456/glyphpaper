@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Glyph Pond",
-  "short_name": "Glyph Pond",
+  "name": "glyphpaper",
+  "short_name": "glyphpaper",
   "version": "1.0.0",
   "description": "A living new tab: butterflies, koi and other creatures drawn with keyboard glyphs on a dark canvas.",
   "icons": {
@@ -26,7 +26,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "newtab@glyph-pond",
+      "id": "newtab@glyphpaper",
       "strict_min_version": "115.0",
       "data_collection_permissions": {
         "required": [

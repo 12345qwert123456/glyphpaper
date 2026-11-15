@@ -3,7 +3,8 @@
 (function (GP) {
   'use strict';
 
-  var KEY = 'glyph-pond';
+  var KEY = 'glyphpaper';
+  var LEGACY = 'glyph-pond';          // прежнее имя проекта: настройки не теряются при переименовании
   var api = null;
   try {
     var root = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
@@ -16,14 +17,14 @@
     return new Promise(function (resolve) {
       if (api) {
         try {
-          var done = function (items) { resolve((items && items[KEY]) || {}); };
-          var p = api.get(KEY);                       // MV3: промис и в Firefox, и в Chromium
+          var done = function (items) { resolve((items && (items[KEY] || items[LEGACY])) || {}); };
+          var p = api.get([KEY, LEGACY]);             // MV3: промис и в Firefox, и в Chromium
           if (p && typeof p.then === 'function') p.then(done, function () { resolve({}); });
-          else api.get(KEY, done);
+          else api.get([KEY, LEGACY], done);
           return;
         } catch (e) { /* падаем в localStorage */ }
       }
-      try { resolve(JSON.parse(localStorage.getItem(KEY) || '{}') || {}); }
+      try { resolve(JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(LEGACY) || '{}') || {}); }
       catch (e2) { resolve({}); }
     });
   };

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Glyph Pond — крошечный сервер палитры.
+"""glyphpaper — крошечный сервер палитры.
 
 Отдаёт ОДИН файл (palette.json) по адресу http://127.0.0.1:PORT/palette.json
 с заголовками CORS — и больше ничего. Нужен расширению новой вкладки: страница
 в браузере не может читать файлы с диска.
 
     python3 tools/palette-server.py                  # порт 8765
-    python3 tools/palette-server.py --port 9000 --file ~/.cache/glyph-pond/palette.json
+    python3 tools/palette-server.py --port 9000 --file ~/.cache/glyphpaper/palette.json
 
 Файл ищется по порядку:
   1. путь из --file
-  2. $XDG_CACHE_HOME/glyph-pond/palette.json   (его пишет шаблон Noctalia)
+  2. $XDG_CACHE_HOME/glyphpaper/palette.json   (его пишет шаблон Noctalia)
   3. $XDG_CACHE_HOME/wal/colors.json           (pywal-совместимый файл Noctalia)
 Страница понимает оба формата. Только стандартная библиотека Python 3.
 """
@@ -28,12 +28,14 @@ MAX_BYTES = 256 * 1024
 def candidates(explicit):
     cache = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
     paths = [explicit] if explicit else []
-    paths += [os.path.join(cache, "glyph-pond", "palette.json"), os.path.join(cache, "wal", "colors.json")]
+    paths += [os.path.join(cache, "glyphpaper", "palette.json"),
+              os.path.join(cache, "glyph-pond", "palette.json"),      # прежнее имя проекта
+              os.path.join(cache, "wal", "colors.json")]
     return [os.path.abspath(os.path.expanduser(p)) for p in paths]
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "glyph-pond-palette/1.0"
+    server_version = "glyphpaper-palette/1.0"
     paths = []
 
     def cors(self):
@@ -97,7 +99,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Serve palette.json on 127.0.0.1 for Glyph Pond.")
+    ap = argparse.ArgumentParser(description="Serve palette.json on 127.0.0.1 for glyphpaper.")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--file", help="path to palette.json or a pywal colors.json")
     ap.add_argument("--verbose", action="store_true", help="log every request")
@@ -105,7 +107,7 @@ def main():
     Handler.paths = candidates(a.file)
     srv = ThreadingHTTPServer((HOST, a.port), Handler)
     srv.verbose = a.verbose
-    print("glyph-pond palette server: http://%s:%d%s" % (HOST, a.port, ROUTE), file=sys.stderr)
+    print("glyphpaper palette server: http://%s:%d%s" % (HOST, a.port, ROUTE), file=sys.stderr)
     for p in Handler.paths:
         print("  %s %s" % ("+" if os.path.isfile(p) else "-", p), file=sys.stderr)
     try:
