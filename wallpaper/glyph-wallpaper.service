@@ -1,0 +1,20 @@
+# Пользовательский сервис systemd для живых обоев.
+#   cp wallpaper/glyph-wallpaper.service ~/.config/systemd/user/
+#   (поправьте путь и вид в ExecStart)
+#   systemctl --user enable --now glyph-wallpaper.service
+#
+# Сервису нужны переменные сессии. В hyprland.conf добавьте ПЕРЕД запуском:
+#   exec-once = systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_RUNTIME_DIR
+# Проще вместо сервиса запускать скрипт строкой exec-once (см. README).
+[Unit]
+Description=Glyph Pond live wallpaper
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/env python3 %h/src/glyph-pond/wallpaper/glyph-wallpaper.py --creature koi
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
